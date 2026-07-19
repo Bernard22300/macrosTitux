@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+.idea/
+.vscode/
+*.swp
+*.swo
+.config/macrosTitux/
+macros/*.xml
+*.log
+.DS_Store

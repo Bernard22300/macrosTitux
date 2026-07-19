@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>macrosTitux - Documentation</title>
+    <style>
+        body { font-family: Arial; max-width: 900px; margin: 30px auto; padding: 20px; background: #f5f7fa; }
+        h1 { color: #6d4aff; }
+        h2 { color: #4a9eff; border-bottom: 2px solid #6d4aff; padding-bottom: 5px; margin-top: 30px; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 5px; overflow-x: auto; }
+        code { background: #eee; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+        .note { background: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 15px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #6d4aff; color: white; }
+    </style>
+</head>
+<body>
+    <h1>macrosTitux v0.1</h1>
+    <p>Gestionnaire de macros Bash a l'interface style MacroDroid</p>
+    <div class="note">
+        <strong>Interface:</strong> Python/Tkinter pour l'interface graphique + Bash pour la generation de scripts.
+    </div>
+    <h2>Pre-requis</h2>
+    <table>
+        <tr><th>Outil</th><th>Installation Debian</th></tr>
+        <tr><td>python3</td><td>python3</td></tr>
+        <tr><td>tkinter</td><td>python3-tk</td></tr>
+        <tr><td>xmllint</td><td>libxml2-utils</td></tr>
+    </table>
+    <h2>Installation</h2>
+    <pre><code>sudo apt install python3-tk libxml2-utils
+chmod +x src/macrosTitux.py
+./src/macrosTitux.py</code></pre>
+</body>
+</html>
