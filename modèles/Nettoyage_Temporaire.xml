@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<macro name="Nettoyage_Temporaire">
+    <trigger type="HORAIRE" label="Horaire (cron)">
+        <config>
+            <param key="heure" value="22"/>
+            <param key="minute" value="0"/>
+            <param key="jours" value="* * * * *"/>
+        </config>
+    </trigger>
+    <variables>
+        <var name="TMP_DIR" value="/tmp"/>
+    </variables>
+    <actions>
+        <action id="1" type="NOTIFIER" label="Notifier">
+            <config>
+                <param key="titre" value="Nettoyage"/>
+                <param key="message" value="Departement des fichiers temporaires"/>
+            </config>
+        </action>
+        <action id="2" type="EXECUTER_CMD" label="Exécuter commande">
+            <config>
+                <param key="commande" value="find /tmp -type f -mtime +7 -delete"/>
+            </config>
+        </action>
+        <action id="3" type="NOTIFIER" label="Notifier">
+            <config>
+                <param key="titre" value="Nettoyage termine"/>
+                <param key="message" value="Fichiers de plus de 7 jours supprimes"/>
+            </config>
+        </action>
+    </actions>
+    <constraints>
+        <constraint id="1" type="PLAGE_HORAIRE" label="Plage horaire">
+            <config>
+                <param key="heure_debut" value="2200"/>
+                <param key="heure_fin" value="2359"/>
+            </config>
+        </constraint>
+    </constraints>
+</macro>

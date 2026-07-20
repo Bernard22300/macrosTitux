@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<macro name="Archi_Mensuelle">
+    <trigger type="HORAIRE" label="Horaire (cron)">
+        <config>
+            <param key="heure" value="18"/>
+            <param key="minute" value="0"/>
+            <param key="jours" value="01 * * *"/>
+        </config>
+    </trigger>
+    <variables>
+        <var name="MOIS" value="$(date +%Y%m)"/>
+        <var name="ARCHIVE_NAME" value="PDF_Archive_${MOIS}.tar.gz"/>
+    </variables>
+    <actions>
+        <action id="1" type="COPIER_FICHIER" label="Copier fichier(s)">
+            <config>
+                <param key="source" value="$HOME/Documents/*.pdf"/>
+                <param key="destination" value="/tmp/archi_temp/"/>
+                <param key="motif" value="*.pdf"/>
+            </config>
+        </action>
+        <action id="2" type="EXECUTER_CMD" label="Exécuter commande">
+            <config>
+                <param key="commande" value="tar -czf $HOME/Archives/${ARCHIVE_NAME} -C /tmp/archi_temp ."/>
+            </config>
+        </action>
+        <action id="3" type="NOTIFIER" label="Notifier">
+            <config>
+                <param key="titre" value="Archive mensuelle"/>
+                <param key="message" value="PDF archives pour ${MOIS}"/>
+            </config>
+        </action>
+    </actions>
+    <constraints>
+        <constraint id="1" type="ESPACE_DISQUE" label="Espace disque">
+            <config>
+                <param key="espace_minimum" value="20"/>
+            </config>
+        </constraint>
+    </constraints>
+</macro>

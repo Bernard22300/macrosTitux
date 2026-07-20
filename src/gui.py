@@ -1,161 +1,199 @@
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------------------------
 # Fichier: gui.py
-# Description: Interface graphique principale (MacrosTituxApp)
+# Description: Interface principale (MacrosTituxApp)
 # Encodage: fr_FR.UTF-8
 #------------------------------------------------------------------------------
 
+from tkinter import ttk, messagebox, Listbox
 import os
-from tkinter import ttk, Tk, Frame, Label, Entry, Button, Text, Scrollbar, Listbox, messagebox, W, X, BOTH, StringVar
-from pathlib import Path
-from dialogs import NewMacroDialog
-from model import load_macros_list, save_macro, generate_bash_from_xml, load_config
-import shutil
-from tkinter import filedialog
+from model import generate_bash_from_xml, init_dirs
 
-APP_NAME = "macrosTitux"
-APP_VERSION = "0.3"
-BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)).replace('/src', ''))
-CONFIG_DIR = Path.home() / ".config" / APP_NAME
-MACRO_DIR = CONFIG_DIR / "macros"
+class MacrosTituxApp(ttk.Frame):
+    """Application principale."""
 
-class MacrosTituxApp(Frame):
-    """Application principale avec interface graphique."""
-    
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-        self.parent.title(f"{APP_NAME} v{APP_VERSION}")
-        self.parent.geometry("800x600")
+        parent.title("macrosTitux v0.3")
+        parent.geometry("900x600")
+
+        self.selected_item = None
+
+        init_dirs()
         self.setup_ui()
-        self.refresh_macros_list()
-    
+        self.refresh_list()
+
+        self.pack(fill="both", expand=True)
+
     def setup_ui(self):
-        notebook = ttk.Notebook(self.parent)
-        notebook.pack(fill='both', expand=True, padx=10, pady=10)
-        
-        self.tab_macros = Frame(notebook)
-        notebook.add(self.tab_macros, text="Macros")
-        self.setup_tab_macros()
-        
-        self.tab_templates = Frame(notebook)
-        notebook.add(self.tab_templates, text="Templates")
-        self.setup_tab_templates()
-        
-        self.tab_settings = Frame(notebook)
-        notebook.add(self.tab_settings, text="Parametres")
-        self.setup_tab_settings()
-        
-        btn_frame = Frame(self)
-        btn_frame.pack(fill='x', padx=10, pady=5)
-        ttk.Button(btn_frame, text="+ Nouvelle macro", command=self.new_macro).pack(side='left', padx=2)
-        ttk.Button(btn_frame, text="Editer", command=self.edit_macro).pack(side='left', padx=2)
-        ttk.Button(btn_frame, text="Supprimer", command=self.delete_macro).pack(side='left', padx=2)
-        ttk.Button(btn_frame, text="Tester", command=self.test_macro).pack(side='left', padx=2)
-        ttk.Button(btn_frame, text="Exporter", command=self.export_macro).pack(side='left', padx=2)
-        ttk.Button(btn_frame, text="Importer", command=self.import_macro).pack(side='left', padx=2)
-        ttk.Button(btn_frame, text="Quitter", command=self.quit).pack(side='right')
-    
-    def setup_tab_macros(self):
-        columns = ('Nom', 'Declencheur', 'Action')
-        self.tree = ttk.Treeview(self.tab_macros, columns=columns, show='headings')
-        for col in columns:
-            self.tree.heading(col, text=col.capitalize())
-        self.tree.column('Nom', width=200)
-        self.tree.column('Declencheur', width=250)
-        self.tree.column('Action', width=250)
-        self.tree.pack(fill='both', expand=True, padx=5, pady=5)
-    
-    def setup_tab_templates(self):
-        label = Label(self.tab_templates, text="Aucun template disponible pour le moment.", justify='center')
-        label.pack(expand=True, pady=50)
-    
-    def setup_tab_settings(self):
-        Label(self.tab_settings, text="Version: {APP_VERSION}", foreground='gray').pack(anchor='w', padx=10, pady=20)
-    
-    def refresh_macros_list(self):
+        tabs = ttk.Notebook(self)
+        tabs.pack(fill="both", expand=True, padx=5, pady=5)
+
+        macros_tab = ttk.Frame(tabs)
+        tabs.add(macros_tab, text="Macros")
+        self.setup_macros_tab(macros_tab)
+
+        modeles_tab = ttk.Frame(tabs)
+        tabs.add(modeles_tab, text="Modeles")
+        self.setup_modeles_tab(modeles_tab)
+
+        settings_tab = ttk.Frame(tabs)
+        tabs.add(settings_tab, text="Parametres")
+        self.setup_settings_tab(settings_tab)
+
+    def setup_macros_tab(self, parent):
+        columns = ("nom", "declencheur", "action")
+        self.tree = ttk.Treeview(parent, columns=columns, show="headings")
+        self.tree.heading("nom", text="Nom")
+        self.tree.heading("declencheur", text="Declencheur")
+        self.tree.heading("action", text="Action")
+        self.tree.column("nom", width=200)
+        self.tree.column("declencheur", width=150)
+        self.tree.column("action", width=200)
+        self.tree.pack(fill="both", expand=True, padx=10, pady=10)
+        self.tree.bind("<<TreeviewSelect>>", self.on_select)
+
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=self.tree.yview)
+        scrollbar.pack(side="right", fill="y", padx=(0, 10))
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        btn_frame = ttk.Frame(parent)
+        btn_frame.pack(fill="x", padx=10, pady=10)
+
+        ttk.Button(btn_frame, text="+ Nouvelle macro", command=self.new_macro).pack(side="left", padx=2)
+        ttk.Button(btn_frame, text="Editer", command=self.edit_macro).pack(side="left", padx=2)
+        ttk.Button(btn_frame, text="Supprimer", command=self.delete_macro).pack(side="left", padx=2)
+        ttk.Button(btn_frame, text="Tester", command=self.test_macro).pack(side="left", padx=2)
+        ttk.Button(btn_frame, text="Exporter", command=self.export_macro).pack(side="left", padx=2)
+        ttk.Button(btn_frame, text="Importer", command=self.import_macro).pack(side="left", padx=2)
+
+    def setup_modeles_tab(self, parent):
+        title_label = ttk.Label(parent, text="Modeles disponibles", font=("Arial", 12, "bold"))
+        title_label.pack(pady=10)
+
+        modeles_dir = os.path.join(os.path.dirname(__file__), "..", "modeles")
+        modeles_dir = os.path.abspath(modeles_dir)
+
+        if os.path.isdir(modeles_dir):
+            modele_files = [f for f in os.listdir(modeles_dir) if f.endswith(".xml")]
+            if modele_files:
+                self.modele_listbox = Listbox(parent, selectmode="single", height=8)
+                self.modele_listbox.pack(fill="both", expand=True, padx=20, pady=10)
+                for m in modele_files:
+                    self.modele_listbox.insert("end", m.replace(".xml", ""))
+
+                btn_frame = ttk.Frame(parent)
+                btn_frame.pack(fill="x", padx=20, pady=10)
+                ttk.Button(btn_frame, text="Installer le modele selectionne",
+                          command=lambda: self.installer_modele(modeles_dir)).pack(side="left")
+                ttk.Button(btn_frame, text="Ouvrir le dossier modeles",
+                          command=lambda: os.system("xdg-open " + modeles_dir)).pack(side="left", padx=5)
+            else:
+                ttk.Label(parent, text="Aucun modele disponible").pack(pady=20)
+        else:
+            ttk.Label(parent, text="Dossier modeles inexistant").pack(pady=20)
+
+    def setup_settings_tab(self, parent):
+        ttk.Label(parent, text="Parametres de l'application", font=("Arial", 12, "bold")).pack(pady=10)
+        ttk.Label(parent, text="Version: 0.3", font=("Arial", 10)).pack(pady=5)
+        ttk.Label(parent, text="Licence: GPL-3.0", font=("Arial", 10)).pack(pady=5)
+
+        btn_frame = ttk.Frame(parent)
+        btn_frame.pack(side="bottom", pady=20)
+        ttk.Button(btn_frame, text="Quitter", command=self.quit_app).pack(padx=5)
+
+    def refresh_list(self):
+        if not hasattr(self, "tree"):
+            return
+        macros_dir = os.path.expanduser("~/.config/macrosTitux/macros/")
+        if not os.path.isdir(macros_dir):
+            return
         for item in self.tree.get_children():
             self.tree.delete(item)
-        for name, trigger, action in load_macros_list():
-            self.tree.insert('', 'end', values=(name, trigger, action))
-    
+        files = sorted([f for f in os.listdir(macros_dir) if f.endswith(".xml")])
+        for f in files:
+            xml_path = os.path.join(macros_dir, f)
+            try:
+                info = generate_bash_from_xml(xml_path, dry_run=True)
+                nom = info.get("name", f.replace(".xml", ""))
+                trigger = info.get("trigger_type", "Inconnu")
+                actions = info.get("actions", [])
+                action_labels = [a.get("label", "") for a in actions[:2]]
+                action_str = ", ".join(action_labels)
+                self.tree.insert("", "end", iid=f, values=(nom, trigger, action_str))
+            except Exception as e:
+                self.tree.insert("", "end", iid=f, values=(f, "Erreur: " + str(e)[:30], "-"))
+
+    def on_select(self, event=None):
+        selection = self.tree.selection()
+        self.selected_item = selection[0] if selection else None
+
     def new_macro(self):
+        from dialogs import NewMacroDialog
         dialog = NewMacroDialog(self.parent)
-        dialog.grab_set()
+        self.parent.wait_window(dialog)
         if dialog.result:
-            name, trigger_data, variables, actions, constraints = dialog.result
-            save_macro(name, trigger_data, variables, actions, constraints)
-            self.refresh_macros_list()
-            messagebox.showinfo("Info", f"Macro '{name}' créée avec succès.")
-        dialog.release_grab()
-    
+            name, trigger, variables, actions, constraints = dialog.result
+            from model import save_macro
+            save_macro(name, trigger, variables, actions, constraints)
+            self.refresh_list()
+
     def edit_macro(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Attention", "Veuillez selectionner une macro a editer.")
+        if not self.selected_item:
+            messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        name = self.tree.item(selection[0])['values'][0]
-        messagebox.showinfo("Edition", f"Mode édition pour: {name}\nÀ implémenter...")
-    
+        messagebox.showinfo("Info", "Fonctionnalite non implantee pour le moment.")
+
     def delete_macro(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Attention", "Veuillez selectionner une macro a supprimer.")
+        if not self.selected_item:
+            messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        name = self.tree.item(selection[0])['values'][0]
-        if messagebox.askyesno("Suppression", f"Voulez-vous vraiment supprimer la macro {name}?"):
-            os.remove(MACRO_DIR / f"{name}.xml")
-            self.refresh_macros_list()
-    
+        result = messagebox.askyesno("Confirmation", "Supprimer la macro " + self.selected_item + "?")
+        if result:
+            from model import delete_macro
+            delete_macro(self.selected_item)
+            self.refresh_list()
+
     def test_macro(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Attention", "Veuillez selectionner une macro a tester.")
+        if not self.selected_item:
+            messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        name = self.tree.item(selection[0])['values'][0]
-        xml_path = MACRO_DIR / f"{name}.xml"
-        generate_bash_from_xml(xml_path)
-        sh_path = xml_path.with_suffix('.sh')
-        os.system(f"xterm -hold -e bash {sh_path}")
-    
+        macro_file = self.selected_item
+        macro_dir = os.path.expanduser("~/.config/macrosTitux/macros/")
+        sh_content, sh_path = generate_bash_from_xml(os.path.join(macro_dir, macro_file), dry_run=False)
+        with open(sh_path, "w", encoding="utf-8") as f:
+            f.write(sh_content)
+        os.chmod(sh_path, 0o755)
+        os.system("xterm -hold -e bash " + sh_path)
+
     def export_macro(self):
-        selection = self.tree.selection()
-        if not selection:
-            messagebox.showwarning("Attention", "Veuillez selectionner une macro a exporter.")
+        if not self.selected_item:
+            messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        name = self.tree.item(selection[0])['values'][0]
-        xml_path = MACRO_DIR / f"{name}.xml"
-        config = load_config()
-        export_dir = Path(config.get('export_dir', str(Path.home() / "macrosTitux_exports")))
-        export_dir.mkdir(parents=True, exist_ok=True)
-        output_path = export_dir / f"{name}.sh"
-        generate_bash_from_xml(xml_path, str(output_path))
-        messagebox.showinfo("Export", f"Script généré: {output_path}")
-    
+        import shutil
+        macro_dir = os.path.expanduser("~/.config/macrosTitux/macros/")
+        dest = os.path.join(os.getcwd(), self.selected_item)
+        shutil.copy(os.path.join(macro_dir, self.selected_item), dest)
+        messagebox.showinfo("Info", "Macro exportee dans le dossier projet")
+
     def import_macro(self):
-        filepath = filedialog.askopenfilename(
-            title="Importer une macro",
-            filetypes=[("Fichiers XML", "*.xml"), ("Tous les fichiers", "*.*")]
-        )
-        if not filepath:
+        result = messagebox.askyesno("Importer", "Choisir un fichier XML ?")
+        if result:
+            messagebox.showinfo("Info", "Fonctionnalite non implantee pour le moment.")
+
+    def installer_modele(self, modeles_dir):
+        selection = self.modele_listbox.curselection()
+        if not selection:
+            messagebox.showwarning("Attention", "Selectionnez un modele.")
             return
-        try:
-            import xml.etree.ElementTree as ET
-            tree = ET.parse(filepath)
-            root = tree.getroot()
-            if root.tag != 'macro':
-                messagebox.showerror("Erreur", "Fichier XML invalide")
-                return
-            macro_name = root.get('name', 'Macro_Inconnue')
-            dest_path = MACRO_DIR / f"{macro_name}.xml"
-            if dest_path.exists():
-                if not messagebox.askyesno("Remplacer", f"La macro '{macro_name}' existe déjà. Remplacer ?"):
-                    return
-            shutil.copy2(filepath, dest_path)
-            self.refresh_macros_list()
-            messagebox.showinfo("Info", f"Macro '{macro_name}' importée avec succès !")
-        except Exception as e:
-            messagebox.showerror("Erreur", f"Impossible d'importer la macro :\n{str(e)}")
-    
-    def quit(self):
+        modele_name = self.modele_listbox.get(selection[0])
+        modele_file = os.path.join(modeles_dir, modele_name + ".xml")
+        user_dir = os.path.expanduser("~/.config/macrosTitux/macros/")
+        import shutil
+        shutil.copy(modele_file, user_dir)
+        self.refresh_list()
+        messagebox.showinfo("Info", "Modele installe avec succes")
+
+    def quit_app(self):
         self.parent.destroy()
