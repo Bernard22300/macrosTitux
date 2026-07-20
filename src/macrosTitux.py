@@ -20,27 +20,29 @@ MACRO_DIR = CONFIG_DIR / "macros"
 CONF_FILE = CONFIG_DIR / "macrosTitux.conf"
 
 TRIGGERS = {
-    "CRON": "Cron (planifie)",
-    "ON_BOOT": "Au demarrage",
-    "FICHIER_MODIFIE": "Fichier modifie",
-    "FICHIER_CREE": "Fichier cree",
-    "USB_CONNECT": "USB connecte",
-    "INTERFACE_RESEAU": "Interface reseau"
+    "DEMARRAGE": "Au démarrage",
+    "HORAIRE": "Horaire",
+    "FICHIER_MODIFIE": "Fichier modifié",
+    "FICHIER_CREE": "Fichier créé",
+    "USB_CONNECTE": "USB connecté",
+    "RESEAU_ACTIF": "Réseau activé",
+    "SORTIE_TUBE": "Sortie de tube"
 }
 
 ACTIONS = {
-    "COPY_FILE": "Copier fichier(s)",
-    "MOVE_FILE": "Deplacer fichier(s)",
-    "DELETE_FILE": "Supprimer fichier(s)",
-    "NOTIFY": "Envoyer notification",
-    "RUN_CMD": "Executer commande",
-    "RESTART_SVC": "Redemarrer service"
+    "COPIER_FICHIER": "Copier fichier(s)",
+    "DEPLACER_FICHIER": "Déplacer fichier(s)",
+    "SUPPRIMER_FICHIER": "Supprimer fichier(s)",
+    "NOTIFIER": "Notifier",
+    "EXECUTER_CMD": "Exécuter commande",
+    "REDÉMARRER_SERV": "Redémarrer service",
+    "SORTIR_RESULTAT": "Sortir résultat dans tube"
 }
 
 CONSTRAINTS = {
-    "DISK_SPACE": "Espace disque",
-    "TIME_RANGE": "Plage horaire",
-    "PROC_RUNNING": "Processus actif"
+    "ESPACE_DISQUE": "Espace disque disponible",
+    "PLAGE_HORAIRE": "Plage horaire",
+    "PROCESSUS_ACTIF": "Processus actif"
 }
 
 def init_dirs():
