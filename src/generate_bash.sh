@@ -19,7 +19,7 @@ xml_get() {
 }
 
 xml_count() {
-    xmllint --xpath "count($2)" "$1" 2>/dev/null || echo "0"
+    xmllint --xpath "$2" "$1" 2>/dev/null | tr -d '[:space:]' || echo "0"
 }
 
 normalize_name() {
@@ -46,87 +46,9 @@ get_params() {
     done
 }
 
-#------------------------------------------------------------------------------
-# Extraction paramètres trigger
-#------------------------------------------------------------------------------
-read_trigger_params() {
-    local xml="$1"
-    while IFS='=' read -r key val; do
-        [[ -z "$key" ]] && continue
-        case "$key" in
-            heure)           T_HEURE="$val" ;;
-            minute)          T_MINUTE="$val" ;;
-            jours)           T_JOURS="$val" ;;
-            chemin)          T_CHEMIN="$val" ;;
-            peripherique)    T_PERIPH="$val" ;;
-            interface)       T_INTERFACE="$val" ;;
-            macro_source)    T_SOURCE_MACRO="$val" ;;
-            variable_reception) T_VAR_RECV="$val" ;;
-        esac
-    done < <(get_params "$xml" '/macro/trigger')
-}
-
-#------------------------------------------------------------------------------
-# Extraction paramètres action
-#------------------------------------------------------------------------------
-read_action_params() {
-    local xml="$1"
-    local idx="$2"
-    P_SOURCE=""
-    P_MOTIF=""
-    P_DESTINATION=""
-    P_CHEMIN=""
-    P_TITRE=""
-    P_MESSAGE=""
-    P_COMMANDE=""
-    P_SERVICE=""
-    P_TUBE=""
-    P_DONNEES=""
-    while IFS='=' read -r key val; do
-        [[ -z "$key" ]] && continue
-        case "$key" in
-            source)      P_SOURCE="$val" ;;
-            motif)       P_MOTIF="$val" ;;
-            destination) P_DESTINATION="$val" ;;
-            chemin)      P_CHEMIN="$val" ;;
-            titre)       P_TITRE="$val" ;;
-            message)     P_MESSAGE="$val" ;;
-            commande)    P_COMMANDE="$val" ;;
-            service)     P_SERVICE="$val" ;;
-            tube)        P_TUBE="$val" ;;
-            donnees)     P_DONNEES="$val" ;;
-        esac
-    done < <(get_params "$xml" "/macro/actions/action[${idx}]")
-}
-
-#------------------------------------------------------------------------------
-# Extraction paramètres contrainte
-#------------------------------------------------------------------------------
-read_constraint_params() {
-    local xml="$1"
-    local idx="$2"
-    C_ESPACE_MIN=""
-    C_HEURE_DEBUT=""
-    C_HEURE_FIN=""
-    C_PROCESSUS=""
-    while IFS='=' read -r key val; do
-        [[ -z "$key" ]] && continue
-        case "$key" in
-            espace_minimum) C_ESPACE_MIN="$val" ;;
-            heure_debut)    C_HEURE_DEBUT="$val" ;;
-            heure_fin)      C_HEURE_FIN="$val" ;;
-            processus)      C_PROCESSUS="$val" ;;
-        esac
-    done < <(get_params "$xml" "/macro/constraints/constraint[${idx}]")
-}
-
 #==============================================================================
 # GÉNÉRATION DU SCRIPT BASH
 #==============================================================================
-
-# Variables globales pour trigger
-T_HEURE="" T_MINUTE="" T_JOURS="" T_CHEMIN=""
-T_PERIPH="" T_INTERFACE="" T_SOURCE_MACRO="" T_VAR_RECV=""
 
 generate_script() {
     local xml_file="$1"
@@ -140,9 +62,6 @@ generate_script() {
     trigger_label=$(xml_get "$xml_file" 'string(/macro/trigger/@label)')
     trigger_label=${trigger_label:-"Non spécifié"}
 
-    #--- Lecture paramètres trigger ---
-    read_trigger_params "$xml_file"
-
     #--- En-tête ---
     echo "#!/bin/bash"
     echo "# -*- coding: utf-8 -*-"
@@ -154,7 +73,6 @@ generate_script() {
     echo "#------------------------------------------------------------------------------"
     echo ""
     echo "set -euo pipefail"
-    echo "FIFO_BASE=\"${FIFO_BASE}\""
     echo ""
 
     #--- Variables ---
@@ -183,45 +101,53 @@ generate_script() {
             echo 'echo "[MACRO] Démarrage à $(date)"'
             ;;
         HORAIRE)
-            echo "# Planification: ${T_MINUTE:-0} ${T_HEURE:-0} * * *"
-            echo "# Ajouter au crontab: crontab -e"
+            local heure minute
+            heure=$(xml_get "$xml_file" 'string(/macro/trigger/config/param[@key="heure"])')
+            minute=$(xml_get "$xml_file" 'string(/macro/trigger/config/param[@key="minute"])')
+            echo "# Planification: ${minute:-0} ${heure:-0} * * *"
             echo '# echo "[MACRO] Exécution horaire à $(date)"'
             ;;
         FICHIER_MODIFIE)
-            echo "# Surveillance fichier: ${T_CHEMIN:-/tmp/fichier.txt}"
-            echo '# Nécessite: inotifywait (apt install inotify-tools)'
-            echo 'if [[ -e "'"${T_CHEMIN:-/tmp/fichier.txt}"'" ]]; then'
+            local chemin
+            chemin=$(xml_get "$xml_file" 'string(/macro/trigger/config/param[@key="chemin"])')
+            chemin=${chemin:-/tmp/fichier.txt}
+            echo "# Surveillance fichier: ${chemin}"
+            echo 'if [[ -e "'"${chemin}"'" ]]; then'
             echo '    echo "[MACRO] Fichier modifié"'
             echo 'fi'
             ;;
         FICHIER_CREE)
-            echo "# Surveillance création fichier: ${T_CHEMIN:-/tmp/fichier.txt}"
-            echo 'if [[ -e "'"${T_CHEMIN:-/tmp/fichier.txt}"'" ]]; then'
+            local chemin
+            chemin=$(xml_get "$xml_file" 'string(/macro/trigger/config/param[@key="chemin"])')
+            chemin=${chemin:-/tmp/fichier.txt}
+            echo "# Surveillance création fichier: ${chemin}"
+            echo 'if [[ -e "'"${chemin}"'" ]]; then'
             echo '    echo "[MACRO] Fichier créé"'
             echo 'fi'
             ;;
         USB_CONNECTE)
-            echo "# USB connecté: ${T_PERIPH:-(tous)}"
-            echo '# Détection via dmesg ou udev'
             echo 'echo "[MACRO] USB connecté"'
             ;;
         RESEAU_ACTIF)
-            echo "# Réseau activé: ${T_INTERFACE:-(toutes)}"
             echo 'if ip link show up 2>/dev/null | grep -q "state UP"; then'
             echo '    echo "[MACRO] Réseau actif"'
             echo 'fi'
             ;;
         SORTIE_TUBE)
-            local fifo_src
-            fifo_src="${FIFO_BASE}/$(normalize_name "${T_SOURCE_MACRO:-source}").fifo"
-            echo "# Lecture depuis tube: ${T_SOURCE_MACRO:-source}"
+            local source_macro var_recv fifo_src
+            source_macro=$(xml_get "$xml_file" 'string(/macro/trigger/config/param[@key="macro_source"])')
+            var_recv=$(xml_get "$xml_file" 'string(/macro/trigger/config/param[@key="variable_reception"])')
+            source_macro=${source_macro:-source}
+            var_recv=${var_recv:-DONNEES_RECUES}
+            fifo_src="${FIFO_BASE}/$(normalize_name "${source_macro}").fifo"
+            echo "# Lecture depuis tube: ${source_macro}"
             echo "TUBE_SOURCE=\"${fifo_src}\""
             echo 'if [[ -p "$TUBE_SOURCE" ]]; then'
-            echo "    ${T_VAR_RECV:-DONNEES_RECUES}=\$(cat \"\$TUBE_SOURCE\")"
+            echo "    ${var_recv}=\$(cat \"\$TUBE_SOURCE\")"
             echo '    echo "[MACRO] Données reçues du tube"'
             echo 'else'
             echo '    echo "[MACRO] ATTENTION: Tube introuvable ($TUBE_SOURCE)"'
-            echo "    ${T_VAR_RECV:-DONNEES_RECUES}=\"\""
+            echo "    ${var_recv}=\"\""
             echo 'fi'
             ;;
         *)
@@ -238,29 +164,36 @@ generate_script() {
         echo "# ============================== CONTRAINTES =============================="
         local c
         for (( c=1; c<=constr_count; c++ )); do
-            local ctype clabel
+            local ctype
             ctype=$(xml_get "$xml_file" "string(/macro/constraints/constraint[${c}]/@type)")
-            clabel=$(xml_get "$xml_file" "string(/macro/constraints/constraint[${c}]/@label)")
-            read_constraint_params "$xml_file" "$c"
 
-            echo "# Contrainte ${c}: ${clabel:-$ctype}"
+            echo "# Contrainte ${c}: ${ctype}"
             case "$ctype" in
                 ESPACE_DISQUE)
-                    echo 'if [[ $(df / | awk "NR==2 {print \$5}" | sed "s/%//") -lt '"${C_ESPACE_MIN:-10}"' ]]; then'
+                    local espace_min
+                    espace_min=$(xml_get "$xml_file" "string(/macro/constraints/constraint[${c}]/config/param[@key='espace_minimum'])")
+                    espace_min=${espace_min:-10}
+                    echo 'if [[ $(df / | awk "NR==2 {print \$5}" | sed "s/%//") -lt '"${espace_min}"' ]]; then'
                     echo '    echo "[CONTRAINTE] Espace disque insuffisant"'
                     echo '    exit 1'
                     echo 'fi'
                     ;;
                 PLAGE_HORAIRE)
+                    local heure_debut heure_fin
+                    heure_debut=$(xml_get "$xml_file" "string(/macro/constraints/constraint[${c}]/config/param[@key='heure_debut'])")
+                    heure_fin=$(xml_get "$xml_file" "string(/macro/constraints/constraint[${c}]/config/param[@key='heure_fin'])")
                     echo '# Contrainte plage horaire'
                     echo 'HEURE_ACTUELLE=$(date +%H%M)'
-                    echo 'if [[ "$HEURE_ACTUELLE" -lt '"${C_HEURE_DEBUT:-0000}"' ]] || [[ "$HEURE_ACTUELLE" -gt '"${C_HEURE_FIN:-2359}"' ]]; then'
+                    echo 'if [[ "$HEURE_ACTUELLE" -lt '"${heure_debut:-0000}"' ]] || [[ "$HEURE_ACTUELLE" -gt '"${heure_fin:-2359}"' ]]; then'
                     echo '    echo "[CONTRAINTE] Hors plage horaire"'
                     echo '    exit 1'
                     echo 'fi'
                     ;;
                 PROCESSUS_ACTIF)
-                    echo 'if ! pgrep -x "'"${C_PROCESSUS:-init}"'" >/dev/null 2>&1; then'
+                    local processus
+                    processus=$(xml_get "$xml_file" "string(/macro/constraints/constraint[${c}]/config/param[@key='processus'])")
+                    processus=${processus:-init}
+                    echo 'if ! pgrep -x "'"${processus}"'" >/dev/null 2>&1; then'
                     echo '    echo "[CONTRAINTE] Processus non actif"'
                     echo '    exit 1'
                     echo 'fi'
@@ -281,48 +214,75 @@ generate_script() {
             local atype alabel
             atype=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/@type)")
             alabel=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/@label)")
-            read_action_params "$xml_file" "$a"
 
             echo "# Action ${a}: ${alabel:-$atype}"
+
+            # Récupération des paramètres de l'action
+            local source motif destination chemin titre message commande service tube donnees
+            source=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='source'])")
+            motif=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='motif'])")
+            destination=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='destination'])")
+            chemin=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='chemin'])")
+            titre=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='titre'])")
+            message=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='message'])")
+            commande=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='commande'])")
+            service=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='service'])")
+            tube=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='tube'])")
+            donnees=$(xml_get "$xml_file" "string(/macro/actions/action[${a}]/config/param[@key='donnees'])")
+
             case "$atype" in
                 COPIER_FICHIER)
-                    echo "mkdir -p \"${P_DESTINATION:-/tmp}\""
-                    echo "cp -v \"${P_SOURCE:-.}\"/${P_MOTIF:-*} \"${P_DESTINATION:-/tmp}/\" 2>/dev/null || echo \"[ACTION] Aucun fichier à copier\""
+                    source=${source:-.}
+                    motif=${motif:-*}
+                    destination=${destination:-/tmp}
+                    echo "mkdir -p \"${destination}\""
+                    echo "cp -rv \"${source}\"/${motif} \"${destination}/\" 2>/dev/null || echo \"[ACTION] Aucun fichier à copier\""
                     ;;
                 DEPLACER_FICHIER)
-                    echo "mkdir -p \"${P_DESTINATION:-/tmp}\""
-                    echo "mv -v \"${P_SOURCE:-.}\"/${P_MOTIF:-*} \"${P_DESTINATION:-/tmp}/\" 2>/dev/null || echo \"[ACTION] Aucun fichier à déplacer\""
+                    source=${source:-.}
+                    motif=${motif:-*}
+                    destination=${destination:-/tmp}
+                    echo "mkdir -p \"${destination}\""
+                    echo "mv -rv \"${source}\"/${motif} \"${destination}/\" 2>/dev/null || echo \"[ACTION] Aucun fichier à déplacer\""
                     ;;
                 SUPPRIMER_FICHIER)
-                    if [[ -n "${P_MOTIF:-}" && "${P_MOTIF}" != "-" ]]; then
-                        echo "find \"${P_CHEMIN:-/tmp}\" -name \"${P_MOTIF}\" -type f -delete 2>/dev/null && echo \"[ACTION] Fichiers supprimés\" || echo \"[ACTION] Rien à supprimer\""
+                    chemin=${chemin:-/tmp}
+                    motif=${motif:--}
+                    if [[ -n "$motif" && "$motif" != "-" ]]; then
+                        echo "find \"${chemin}\" -name \"${motif}\" -type f -delete 2>/dev/null && echo \"[ACTION] Fichiers supprimés\" || echo \"[ACTION] Rien à supprimer\""
                     else
-                        echo "rm -fv \"${P_CHEMIN}\" 2>/dev/null && echo \"[ACTION] Fichier supprimé\" || echo \"[ACTION] Fichier non trouvé\""
+                        echo "rm -fv \"${chemin}\" 2>/dev/null && echo \"[ACTION] Fichier supprimé\" || echo \"[ACTION] Fichier non trouvé\""
                     fi
                     ;;
                 NOTIFIER)
+                    titre=${titre:-Notification}
+                    message=${message:-}
                     echo 'if command -v notify-send >/dev/null 2>&1; then'
-                    echo "    notify-send \"${P_TITRE:-Notification}\" \"${P_MESSAGE:-}\""
+                    echo "    notify-send \"${titre}\" \"${message}\""
                     echo 'else'
-                    echo "    echo \"[NOTIFICATION] ${P_TITRE:-}: ${P_MESSAGE:-}\""
+                    echo "    echo \"[NOTIFICATION] ${titre}: ${message}\""
                     echo 'fi'
                     ;;
                 EXECUTER_CMD)
-                    echo "eval \"${P_COMMANDE:-echo 'Commande vide'}\" 2>&1 | while read line; do echo \"[CMD] \$line\"; done"
+                    commande=${commande:-echo "Commande vide"}
+                    echo "eval \"${commande}\" 2>&1 | while read line; do echo \"[CMD] \$line\"; done"
                     ;;
                 REDÉMARRER_SERV)
-                    echo 'if systemctl is-active --quiet "'"${P_SERVICE:-cron}"'" 2>/dev/null; then'
-                    echo "    sudo systemctl restart \"${P_SERVICE:-cron}\" && echo \"[SERVICE] ${P_SERVICE:-} redémarré\" || echo \"[SERVICE] Échec\""
+                    service=${service:-cron}
+                    echo 'if systemctl is-active --quiet "'"${service}"'" 2>/dev/null; then'
+                    echo "    sudo systemctl restart \"${service}\" && echo \"[SERVICE] ${service} redémarré\" || echo \"[SERVICE] Échec\""
                     echo 'else'
-                    echo "    echo \"[SERVICE] Service '${P_SERVICE:-}' non trouvé\""
+                    echo "    echo \"[SERVICE] Service '${service}' non trouvé\""
                     echo 'fi'
                     ;;
                 SORTIR_RESULTAT)
+                    tube=${tube:-resultat}
+                    donnees=${donnees:-}
                     local fifo_out
-                    fifo_out="${FIFO_BASE}/$(normalize_name "${P_TUBE:-resultat}").fifo"
+                    fifo_out="${FIFO_BASE}/$(normalize_name "${tube}").fifo"
                     echo "mkdir -p \"\$(dirname \"${fifo_out}\")\""
                     echo '[[-p "'"$fifo_out"'" ]] || mkfifo "'"$fifo_out"'"'
-                    echo "echo \"${P_DONNEES:-}\" > \"${fifo_out}\" &"
+                    echo "echo \"${donnees}\" > \"${fifo_out}\" &"
                     echo 'sleep 0.5'
                     echo 'wait $! 2>/dev/null || true'
                     echo "[TUBE] Données écrites dans ${fifo_out}"
@@ -358,10 +318,10 @@ main() {
         exit 1
     fi
 
-    log "Conversion: $(basename "$xml_file") → $(basename "$output_file")"
-    generate_script < "$xml_file" > "$output_file"
+    generate_script "$xml_file" > "$output_file"
     chmod +x "$output_file"
-    log "OK: $output_file"
+
+    echo "OK: $output_file"
 }
 
 main "$@"

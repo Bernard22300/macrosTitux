@@ -9,8 +9,9 @@ import os
 import sys
 import json
 import xml.etree.ElementTree as ET
+import shutil
 from pathlib import Path
-from tkinter import ttk, messagebox, StringVar, Text, Tk, Toplevel
+from tkinter import ttk, messagebox, StringVar, Text, Tk, Toplevel, filedialog, Entry, Label, Frame, END
 
 APP_NAME = "macrosTitux"
 APP_VERSION = "0.1"
@@ -19,6 +20,9 @@ CONFIG_DIR = Path.home() / ".config" / APP_NAME
 MACRO_DIR = CONFIG_DIR / "macros"
 CONF_FILE = CONFIG_DIR / "macrosTitux.conf"
 
+#------------------------------------------------------------------------------
+# CONSTANTES (Français)
+#------------------------------------------------------------------------------
 TRIGGERS = {
     "DEMARRAGE": "Au démarrage",
     "HORAIRE": "Horaire",
@@ -121,15 +125,19 @@ class MacrosTituxApp(ttk.Frame):
         self.parent.geometry("800x600")
         notebook = ttk.Notebook(self)
         notebook.pack(fill='both', expand=True, padx=10, pady=10)
+
         self.tab_macros = ttk.Frame(notebook)
         notebook.add(self.tab_macros, text="Macros")
         self.setup_tab_macros()
+
         self.tab_templates = ttk.Frame(notebook)
         notebook.add(self.tab_templates, text="Templates")
         self.setup_tab_templates()
+
         self.tab_settings = ttk.Frame(notebook)
         notebook.add(self.tab_settings, text="Parametres")
         self.setup_tab_settings()
+
         btn_frame = ttk.Frame(self)
         btn_frame.pack(fill='x', padx=10, pady=5)
         ttk.Button(btn_frame, text="+ Nouvelle macro", command=self.new_macro).pack(side='left', padx=2)
@@ -137,6 +145,7 @@ class MacrosTituxApp(ttk.Frame):
         ttk.Button(btn_frame, text="Supprimer", command=self.delete_macro).pack(side='left', padx=2)
         ttk.Button(btn_frame, text="Tester", command=self.test_macro).pack(side='left', padx=2)
         ttk.Button(btn_frame, text="Exporter", command=self.export_macro).pack(side='left', padx=2)
+        ttk.Button(btn_frame, text="Importer", command=self.import_macro).pack(side='left', padx=2)
         ttk.Button(btn_frame, text="Quitter", command=self.quit).pack(side='right')
         self.refresh_macros_list()
 
@@ -204,7 +213,8 @@ class MacrosTituxApp(ttk.Frame):
         xml_path = MACRO_DIR / f"{name}.xml"
         generate_bash_from_xml(xml_path)
         sh_path = xml_path.with_suffix('.sh')
-        os.system(f"xterm -e bash {sh_path}; echo 'Pressez Entree pour fermer'; read")
+        # Utilisation de xterm -hold pour garder la fenêtre ouverte
+        os.system(f"xterm -hold -e bash {sh_path}")
 
     def export_macro(self):
         selection = self.tree.selection()
@@ -219,6 +229,38 @@ class MacrosTituxApp(ttk.Frame):
         output_path = export_dir / f"{name}.sh"
         generate_bash_from_xml(xml_path, str(output_path))
         messagebox.showinfo("Export", f"Script genere: {output_path}")
+
+    def import_macro(self):
+        """Importe une macro depuis un fichier XML externe."""
+        filepath = filedialog.askopenfilename(
+            title="Importer une macro",
+            filetypes=[("Fichiers XML", "*.xml"), ("Tous les fichiers", "*.*")]
+        )
+
+        if not filepath:
+            return
+
+        try:
+            tree = ET.parse(filepath)
+            root = tree.getroot()
+
+            if root.tag != 'macro':
+                messagebox.showerror("Erreur", "Fichier XML invalide : ce n'est pas une macro macrosTitux")
+                return
+
+            macro_name = root.get('name', 'Macro_Inconnue')
+            dest_path = MACRO_DIR / f"{macro_name}.xml"
+
+            if dest_path.exists():
+                if not messagebox.askyesno("Remplacer", f"La macro '{macro_name}' existe déjà. Remplacer ?"):
+                    return
+
+            shutil.copy2(filepath, dest_path)
+            self.refresh_macros_list()
+            messagebox.showinfo("Info", f"Macro '{macro_name}' importée avec succès !")
+
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Impossible d'importer la macro :\n{str(e)}")
 
     def quit(self):
         self.parent.destroy()
