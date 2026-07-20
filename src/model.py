@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 #------------------------------------------------------------------------------
 # Fichier: model.py
 # Description: Logique métier (sauvegarde, chargement, conversion)
@@ -95,3 +96,10 @@ def save_macro(name, trigger_data, variables, actions, constraints):
     ET.indent(tree, space="    ")
     with open(MACRO_DIR / f"{name}.xml", 'wb') as f:
         tree.write(f, encoding='utf-8', xml_declaration=True)
+
+def generate_bash_from_xml(xml_path, output_path=None):
+    """Exécute le script de conversion XML → Bash."""
+    script_path = Path(__file__).parent / "generate_bash.sh"
+    if output_path is None:
+        output_path = str(xml_path).replace('.xml', '.sh')
+    os.system(f"bash {script_path} {xml_path} {output_path}")
