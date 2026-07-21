@@ -14,58 +14,58 @@ Concue pour des utilisateurs non-experts en informatique, avec une terminologie
 
 Le projet suit une architecture **Vue/Moteur** modulaire :
 
-    src/
-    ├── macrosTitux.py          # Point dentree (main)
-    ├── config.py               # Constantes (declencheurs, actions, contraintes)
-    ├── model.py                # Moteur (sauvegarde XML, conversion Bash)
-    ├── widgets.py              # Composants GUI (TriggerWidget, ActionFrame...)
-    ├── dialogs.py              # Dialogues (creation de macro)
-    ├── gui.py                  # Interface principale (MacrosTituxApp)
-    └── generate_bash.sh        # Convertisseur XML vers Bash
+src/
+├── macrosTitux.py          # Point dentree (main)
+├── config.py               # Constantes (declencheurs, actions, contraintes)
+├── model.py                # Moteur (sauvegarde XML, conversion Bash)
+├── widgets.py              # Composants GUI (TriggerWidget, ActionFrame...)
+├── dialogs.py              # Dialogues (creation de macro)
+├── gui.py                  # Interface principale (MacrosTituxApp)
+└── generate_bash.sh        # Convertisseur XML → Bash
 
 ### Separation Vue/Moteur
 
 | Couche | Fichiers | Role |
 |--------|----------|------|
-| Vue | gui.py, dialogs.py, widgets.py | Interface Tkinter, interactions utilisateur |
-| Moteur | model.py, config.py, generate_bash.sh | Logique metier, sauvegarde, conversion |
-| Entree | macrosTitux.py | Initialisation et lancement |
+| **Vue** | gui.py, dialogs.py, widgets.py | Interface Tkinter, interactions utilisateur |
+| **Moteur** | model.py, config.py, generate_bash.sh | Logique metier, sauvegarde, conversion |
+| **Entree** | macrosTitux.py | Initialisation et lancement |
 
 ## Installation
 
 ### Pre-requis
 
-    sudo apt update
-    sudo apt install python3-tk libxml2-utils
+sudo apt update
+sudo apt install python3-tk libxml2-utils
 
 ### Lancement
 
-    cd macrosTitux
-    chmod +x src/macrosTitux.py
-    ./src/macrosTitux.py
+cd macrosTitux
+chmod +x src/macrosTitux.py
+./src/macrosTitux.py
 
 ## Tests
 
 ### Installer pytest
 
-    ./scripts/installer_pytest.sh
+./scripts/installer_pytest.sh
 
 ou via apt :
 
-    sudo apt install python3-pytest
+sudo apt install python3-pytest
 
 ### Lancer les tests
 
-    pytest tests/ -v
+pytest tests/ -v
 
-### Structure des tests
+Structure des tests :
 
-    tests/
-    ├── conftest.py              # Fixtures communes
-    ├── test_config.py           # Tests des constantes
-    ├── test_model.py            # Tests sauvegarde/chargement XML
-    ├── test_generate_bash.py    # Tests conversion XML vers Bash
-    └── test_widgets.py          # Tests composants GUI
+tests/
+├── conftest.py              # Fixtures communes
+├── test_config.py           # Tests des constantes
+├── test_model.py            # Tests sauvegarde/chargement XML
+├── test_generate_bash.py    # Tests conversion XML → Bash
+└── test_widgets.py          # Tests composants GUI
 
 ## Scripts utilitaires
 
@@ -74,7 +74,7 @@ ou via apt :
 | scripts/sauvegarder_projet.sh | Ajoute, committe et pousse vers GitHub |
 | scripts/installer_pytest.sh | Installe pytest proprement (apt ou venv) |
 | scripts/refactor_modulaire.sh | Decoupe le code en fichiers modulaires |
-| scripts/install_exemples.sh | Installe 4 macros exemple |
+| scripts/install_exemples.sh | Installe 4 macros demple |
 | scripts/projet-instantane.sh | Genere un instantane du projet |
 | scripts/fix-gitignore.sh | Configure le .gitignore |
 | scripts/mise_a_niveau.sh | Synchronise les fichiers du projet |
@@ -86,8 +86,8 @@ ou via apt :
 | DEMARRAGE | Au demarrage du systeme |
 | HORAIRE | Programmation cron (heure, minute, jours) |
 | FICHIER_MODIFIE | Sur modification dun fichier |
-| FICHIER_CREE | Sur creation dun fichier |
-| USB_CONNECTE | Sur connexion dun peripherique USB |
+| FICHIER_CREE | Sur creation d'un fichier |
+| USB_CONNECTE | Sur connexion d'un peripherique USB |
 | RESEAU_ACTIF | Sur activation dune interface reseau |
 | SORTIE_TUBE | Sur reception de donnees via tube nomme (FIFO) |
 
@@ -108,7 +108,7 @@ ou via apt :
 | Type | Description |
 |------|-------------|
 | ESPACE_DISQUE | Verifier lespace disque disponible |
-| PLAGE_HORAIRE | Limiter lexcution a une plage horaire |
+| PLAGE_HORAIRE | Limiter l'execution a une plage horaire |
 | PROCESSUS_ACTIF | Verifier quun processus tourne |
 
 ## Stockage des donnees
@@ -123,10 +123,8 @@ ou via apt :
 
 Les macros peuvent senchaner via les tubes nommes (FIFO) :
 
-1. Macro A utilise laction SORTIR_RESULTAT pour ecrire dans un tube
-2. Macro B utilise le declencheur SORTIE_TUBE pour lire le tube et se declencher
-
-Exemple : Lister_PDF genere une liste puis Archiver_PDF archive les fichiers listes
+1. Macro A utilise l'action SORTIR_RESULTAT -> ecrit dans un tube
+2. Macro B utilise le declencheur SORTIE_TUBE -> lit le tube et se declenche
 
 ## Licence
 
