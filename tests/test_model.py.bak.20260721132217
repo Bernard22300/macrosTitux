@@ -11,18 +11,18 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
-from model import sauvegarder_macro, charger_liste_macros, initialiser_dossiers, DOSSIER_MACROS
+from model import save_macro, load_macros_list, init_dirs, MACRO_DIR
 
 class TestModel:
     """Tests du modèle de données."""
 
-    def test_sauvegarder_macro_creates_valid_xml(self, dossier_temporaire):
-        """Un appel à sauvegarder_macro crée un XML valide."""
+    def test_save_macro_creates_valid_xml(self, temp_dir):
+        """Un appel à save_macro crée un XML valide."""
         # Mock des dossiers
         from unittest.mock import patch, MagicMock
 
-        with patch('model.DOSSIER_MACROS', dossier_temporaire):
-            donnees_declencheur = {
+        with patch('model.MACRO_DIR', temp_dir):
+            trigger_data = {
                 'type': 'DEMARRAGE',
                 'label': 'Au démarrage',
                 'params': {}
@@ -41,49 +41,49 @@ class TestModel:
                 'params': {'espace_minimum': '10'}
             }]
 
-            sauvegarder_macro("Test_Macro", donnees_declencheur, variables, actions, constraints)
+            save_macro("Test_Macro", trigger_data, variables, actions, constraints)
 
         # Vérifie que le fichier a été créé
-        fichier_xml = dossier_temporaire / "Test_Macro.xml"
-        assert fichier_xml.exists()
+        xml_file = temp_dir / "Test_Macro.xml"
+        assert xml_file.exists()
 
         # Vérifie que c'est un XML valide
-        tree = ET.parse(fichier_xml)
+        tree = ET.parse(xml_file)
         root = tree.getroot()
         assert root.tag == 'macro'
         assert root.get('name') == 'Test_Macro'
 
-    def test_sauvegarder_macro_preserves_trigger_type(self, dossier_temporaire):
+    def test_save_macro_preserves_trigger_type(self, temp_dir):
         """Le type de déclencheur est conservé dans le XML."""
         from unittest.mock import patch
 
-        with patch('model.DOSSIER_MACROS', dossier_temporaire):
-            donnees_declencheur = {
+        with patch('model.MACRO_DIR', temp_dir):
+            trigger_data = {
                 'type': 'HORAIRE',
                 'label': 'Horaire',
                 'params': {'heure': '8', 'minute': '0'}
             }
-            sauvegarder_macro("Test_Macro_2", donnees_declencheur, [], [], [])
+            save_macro("Test_Macro_2", trigger_data, [], [], [])
 
-        fichier_xml = dossier_temporaire / "Test_Macro_2.xml"
-        tree = ET.parse(fichier_xml)
+        xml_file = temp_dir / "Test_Macro_2.xml"
+        tree = ET.parse(xml_file)
         trigger = tree.find('.//trigger')
         assert trigger is not None
         assert trigger.get('type') == 'HORAIRE'
 
-    def test_sauvegarder_macro_with_multiple_actions(self, dossier_temporaire):
+    def test_save_macro_with_multiple_actions(self, temp_dir):
         """Plusieurs actions sont sauvegardées."""
         from unittest.mock import patch
 
-        with patch('model.DOSSIER_MACROS', dossier_temporaire):
-            donnees_declencheur = {'type': 'DEMARRAGE', 'label': 'Au démarrage', 'params': {}}
+        with patch('model.MACRO_DIR', temp_dir):
+            trigger_data = {'type': 'DEMARRAGE', 'label': 'Au démarrage', 'params': {}}
             actions = [
                 {'id': '1', 'type': 'NOTIFIER', 'label': 'Notif 1', 'params': {}},
                 {'id': '2', 'type': 'COPIER_FICHIER', 'label': 'Copier', 'params': {}}
             ]
-            sauvegarder_macro("Test_Multi_Action", donnees_declencheur, [], actions, [])
+            save_macro("Test_Multi_Action", trigger_data, [], actions, [])
 
-        fichier_xml = dossier_temporaire / "Test_Multi_Action.xml"
-        tree = ET.parse(fichier_xml)
+        xml_file = temp_dir / "Test_Multi_Action.xml"
+        tree = ET.parse(xml_file)
         action_elements = tree.findall('.//actions/action')
         assert len(action_elements) == 2

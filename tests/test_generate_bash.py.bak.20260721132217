@@ -19,25 +19,25 @@ class TestGenerateBash:
         assert script.exists()
         assert os.access(script, os.X_OK)
 
-    def test_generate_bash_with_sample_xml(self, dossier_temporaire, echantillon_xml, echantillon_script_bash):
+    def test_generate_bash_with_sample_xml(self, temp_dir, sample_macro_xml, mock_generate_bash_script):
         """La conversion d'un XML exemple produit un script."""
-        output_sh = dossier_temporaire / "output_test.sh"
+        output_sh = temp_dir / "output_test.sh"
 
         # Simule l'exécution (mock car on teste juste que ça s'exécute)
         result = subprocess.run(
-            ['bash', str(echantillon_script_bash), str(echantillon_xml), str(output_sh)],
+            ['bash', str(mock_generate_bash_script), str(sample_macro_xml), str(output_sh)],
             capture_output=True,
             text=True
         )
 
         assert output_sh.exists()
 
-    def test_generated_script_starts_shebang(self, dossier_temporaire, echantillon_xml, echantillon_script_bash):
+    def test_generated_script_starts_shebang(self, temp_dir, sample_macro_xml, mock_generate_bash_script):
         """Le script généré commence par un shebang Bash."""
-        output_sh = dossier_temporaire / "output_test.sh"
+        output_sh = temp_dir / "output_test.sh"
 
         subprocess.run(
-            ['bash', str(echantillon_script_bash), str(echantillon_xml), str(output_sh)],
+            ['bash', str(mock_generate_bash_script), str(sample_macro_xml), str(output_sh)],
             capture_output=True
         )
 

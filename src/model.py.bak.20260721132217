@@ -11,29 +11,29 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 # IMPORT ABSOLU (compatible pytest)
-from config import NOM_APPLICATION, CONFIG_DEFAUT
+from config import APP_NAME, DEFAULT_CONFIG
 
-DOSSIER_CONFIG = Path.home() / ".config" / NOM_APPLICATION
-DOSSIER_MACROS = DOSSIER_CONFIG / "macros"
-FICHIER_CONF = DOSSIER_CONFIG / "macrosTitux.conf"
+CONFIG_DIR = Path.home() / ".config" / APP_NAME
+MACRO_DIR = CONFIG_DIR / "macros"
+CONF_FILE = CONFIG_DIR / "macrosTitux.conf"
 
-def initialiser_dossiers():
+def init_dirs():
     """Crée les dossiers de configuration."""
-    DOSSIER_CONFIG.mkdir(parents=True, exist_ok=True)
-    DOSSIER_MACROS.mkdir(parents=True, exist_ok=True)
-    if not FICHIER_CONF.exists():
-        with open(FICHIER_CONF, 'w', encoding='utf-8') as f:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    MACRO_DIR.mkdir(parents=True, exist_ok=True)
+    if not CONF_FILE.exists():
+        with open(CONF_FILE, 'w', encoding='utf-8') as f:
             json.dump(DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
 
-def charger_config():
+def load_config():
     """Charge la configuration utilisateur."""
-    with open(FICHIER_CONF, 'r', encoding='utf-8') as f:
+    with open(CONF_FILE, 'r', encoding='utf-8') as f:
         return json.load(f)
 
-def charger_liste_macros():
+def load_macros_list():
     """Liste toutes les macros enregistrées."""
     macros = []
-    for f in DOSSIER_MACROS.glob("*.xml"):
+    for f in MACRO_DIR.glob("*.xml"):
         tree = ET.parse(f)
         root = tree.getroot()
         name = root.get('name')
@@ -43,17 +43,17 @@ def charger_liste_macros():
         macros.append((name, trigger_label, action_label))
     return macros
 
-def sauvegarder_macro(name, donnees_declencheur, variables, actions, constraints):
+def save_macro(name, trigger_data, variables, actions, constraints):
     """Sauvegarde une macro au format XML."""
     root = ET.Element("macro")
     root.set('name', name)
 
     # Trigger
     trigger = ET.SubElement(root, "trigger")
-    trigger.set('type', donnees_declencheur['type'])
-    trigger.set('label', donnees_declencheur['label'])
+    trigger.set('type', trigger_data['type'])
+    trigger.set('label', trigger_data['label'])
     trigger_cfg = ET.SubElement(trigger, "config")
-    for k, v in donnees_declencheur['params'].items():
+    for k, v in trigger_data['params'].items():
         param = ET.SubElement(trigger_cfg, "param")
         param.set('key', k)
         param.set('value', str(v))
@@ -94,32 +94,32 @@ def sauvegarder_macro(name, donnees_declencheur, variables, actions, constraints
 
     tree = ET.ElementTree(root)
     ET.indent(tree, space="    ")
-    with open(DOSSIER_MACROS / f"{name}.xml", 'wb') as f:
+    with open(MACRO_DIR / f"{name}.xml", 'wb') as f:
         tree.write(f, encoding='utf-8', xml_declaration=True)
 
-def supprimer_macro(nom_macro):
+def delete_macro(macro_name):
     """Supprime une macro XML."""
-    macro_path = DOSSIER_MACROS / f"{nom_macro}.xml"
+    macro_path = MACRO_DIR / f"{macro_name}.xml"
     if macro_path.exists():
         macro_path.unlink()
         # Supprimer aussi le fichier Bash associé
-        chemin_sh = DOSSIER_MACROS / f"{nom_macro}.sh"
-        if chemin_sh.exists():
-            chemin_sh.unlink()
+        sh_path = MACRO_DIR / f"{macro_name}.sh"
+        if sh_path.exists():
+            sh_path.unlink()
 
-def generer_bash_depuis_xml(chemin_xml, chemin_sortie=None, simulation=False):
+def generate_bash_from_xml(xml_path, output_path=None, dry_run=False):
     """Convertit un XML en script Bash et retourne les infos de la macro.
 
     Args:
-        chemin_xml: Chemin vers le fichier XML
-        chemin_sortie: Chemin de sortie du script (optionnel)
-        simulation: Si True, retourne seulement les infos sans générer
+        xml_path: Chemin vers le fichier XML
+        output_path: Chemin de sortie du script (optionnel)
+        dry_run: Si True, retourne seulement les infos sans générer
 
     Returns:
         dict: Informations sur la macro (name, trigger_type, actions...)
     """
     # Parser le XML pour extraire les infos
-    tree = ET.parse(chemin_xml)
+    tree = ET.parse(xml_path)
     root = tree.getroot()
 
     info = {
@@ -137,16 +137,16 @@ def generer_bash_depuis_xml(chemin_xml, chemin_sortie=None, simulation=False):
                 'label': action.get('label', '')
             })
 
-    if not simulation:
+    if not dry_run:
         # Générer le script Bash via le shell script
-        chemin_script = Path(__file__).parent / "generate_bash.sh"
-        if chemin_sortie is None:
-            chemin_sortie = str(chemin_xml).replace('.xml', '.sh')
+        script_path = Path(__file__).parent / "generate_bash.sh"
+        if output_path is None:
+            output_path = str(xml_path).replace('.xml', '.sh')
 
-        result = os.system(f"bash \"{chemin_script}\" \"{chemin_xml}\" \"{chemin_sortie}\"")
+        result = os.system(f"bash \"{script_path}\" \"{xml_path}\" \"{output_path}\"")
         if result != 0:
-            raise RuntimeError(f"Échec de génération du script Bash: {chemin_xml}")
+            raise RuntimeError(f"Échec de génération du script Bash: {xml_path}")
 
-        info['chemin_sortie'] = chemin_sortie
+        info['output_path'] = output_path
 
     return info

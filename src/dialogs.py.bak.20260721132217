@@ -7,8 +7,8 @@
 
 from tkinter import ttk, Frame, Label, Entry, Button, messagebox
 from tkinter import Toplevel, Scrollbar, TOP, BOTTOM, LEFT, RIGHT, BOTH, W, E, N, S, NS
-from config import DECLNCHEURS, ACTIONS, CONTRAINTES
-from widgets import WidgetDeclencheur, CadreAction, CadreContrainte, CadreVariable
+from config import TRIGGERS, ACTIONS, CONSTRAINTS
+from widgets import TriggerWidget, ActionFrame, ConstraintFrame, VariableFrame
 
 class NewMacroDialog(Toplevel):
     """Boîte de dialogue pour créer une nouvelle macro."""
@@ -39,7 +39,7 @@ class NewMacroDialog(Toplevel):
 
         # Déclencheur
         Label(main_frame, text="Déclencheur:", font=('Arial', 9, 'bold')).pack(anchor=W, pady=(10, 0))
-        self.trigger_widget = WidgetDeclencheur(main_frame)
+        self.trigger_widget = TriggerWidget(main_frame)
         self.trigger_widget.pack(fill=X, pady=5)
 
         # Variables
@@ -85,19 +85,19 @@ class NewMacroDialog(Toplevel):
 
     def ajouter_variable(self):
         var_num = len(self.variable_frames) + 1
-        frame = CadreVariable(self.variables_frame, var_num=var_num)
+        frame = VariableFrame(self.variables_frame, var_num=var_num)
         frame.pack(fill=X, pady=2)
         self.variable_frames.append(frame)
 
     def ajouter_action(self):
         action_num = len(self.action_frames) + 1
-        frame = CadreAction(self.actions_container, action_num=action_num)
+        frame = ActionFrame(self.actions_container, action_num=action_num)
         frame.pack(fill=X, pady=2)
         self.action_frames.append(frame)
 
     def ajouter_contrainte(self):
         constraint_num = len(self.constraint_frames) + 1
-        frame = CadreContrainte(self.constraints_container, constraint_num=constraint_num)
+        frame = ConstraintFrame(self.constraints_container, constraint_num=constraint_num)
         frame.pack(fill=X, pady=2)
         self.constraint_frames.append(frame)
 

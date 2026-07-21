@@ -10,16 +10,16 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
-from config import DECLNCHEURS, ACTIONS, CONTRAINTES
+from config import TRIGGERS, ACTIONS, CONSTRAINTS
 
-class TestLogiqueWidgets:
+class TestWidgetsLogic:
     """Tests logiques des widgets (sans GUI)."""
     
     def test_trigger_widget_get_data_returns_type(self):
         """Le widget TriggerWidget retourne le bon type."""
         # Test simplifié - logique sans instance Tk
-        assert "DEMARRAGE" in DECLNCHEURS
-        assert "Au démarrage" in DECLNCHEURS.values()
+        assert "DEMARRAGE" in TRIGGERS
+        assert "Au démarrage" in TRIGGERS.values()
     
     def test_action_widget_has_all_types(self):
         """Tous les types d'actions sont disponibles."""
@@ -34,5 +34,5 @@ class TestLogiqueWidgets:
         """Tous les types de contraintes sont disponibles."""
         expected_constraints = ["ESPACE_DISQUE", "PLAGE_HORAIRE", "PROCESSUS_ACTIF"]
         for constraint in expected_constraints:
-            assert constraint in CONTRAINTES
+            assert constraint in CONSTRAINTS
 

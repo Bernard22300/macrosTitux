@@ -16,13 +16,13 @@ SRC_DIR = Path(__file__).parent.parent / 'src'
 sys.path.insert(0, str(SRC_DIR))
 
 @pytest.fixture
-def dossier_temporaire():
+def temp_dir():
     """Crée un dossier temporaire pour les tests."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
 
 @pytest.fixture
-def echantillon_xml(dossier_temporaire):
+def sample_macro_xml(temp_dir):
     """Crée un XML exemple pour les tests."""
     xml_content = '''<?xml version="1.0" encoding="UTF-8"?>
 <macro name="Test_Macro">
@@ -49,14 +49,14 @@ def echantillon_xml(dossier_temporaire):
     </constraints>
 </macro>'''
 
-    xml_file = dossier_temporaire / "test_macro.xml"
+    xml_file = temp_dir / "test_macro.xml"
     xml_file.write_text(xml_content, encoding='utf-8')
     return xml_file
 
 @pytest.fixture
-def echantillon_script_bash(dossier_temporaire):
+def mock_generate_bash_script(temp_dir):
     """Crée un générateur Bash minimaliste pour les tests."""
-    script_path = dossier_temporaire / "generate_bash.sh"
+    script_path = temp_dir / "generate_bash.sh"
     script_content = '''#!/bin/bash
 echo "#!/bin/bash" > "$2"
 echo "echo TEST_MODE" >> "$2"

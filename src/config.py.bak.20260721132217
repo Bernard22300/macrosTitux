@@ -5,11 +5,11 @@
 # Encodage: fr_FR.UTF-8
 #------------------------------------------------------------------------------
 
-NOM_APPLICATION = "macrosTitux"
-VERSION_APPLICATION = "0.3"
-LICENCE_APPLICATION = "GPL-3.0"
+APP_NAME = "macrosTitux"
+APP_VERSION = "0.3"
+APP_LICENSE = "GPL-3.0"
 
-CONFIG_DEFAUT = {
+DEFAULT_CONFIG = {
     "theme": "defaut",
     "langue": "fr_FR.UTF-8",
     "notifications": True,
@@ -19,7 +19,7 @@ CONFIG_DEFAUT = {
 #------------------------------------------------------------------------------
 # Déclencheurs disponibles (TYPE_CODE: Libellé affiché)
 #------------------------------------------------------------------------------
-DECLNCHEURS = {
+TRIGGERS = {
     "DEMARRAGE": "Au démarrage",
     "HORAIRE": "Horaire programmé",
     "FICHIER_MODIFIE": "Fichier modifié",
@@ -45,7 +45,7 @@ ACTIONS = {
 #------------------------------------------------------------------------------
 # Contraintes disponibles (TYPE_CODE: Libellé affiché)
 #------------------------------------------------------------------------------
-CONTRAINTES = {
+CONSTRAINTS = {
     "ESPACE_DISQUE": "Espace disque minimum",
     "PLAGE_HORAIRE": "Plage horaire valide",
     "PROCESSUS_ACTIF": "Processus en cours d'exécution"
@@ -54,7 +54,7 @@ CONTRAINTES = {
 #------------------------------------------------------------------------------
 # Paramètres par défaut pour chaque déclencheur
 #------------------------------------------------------------------------------
-PARAMS_DEFAUT_DECLNCHEUR = {
+TRIGGER_DEFAULT_PARAMS = {
     "DEMARRAGE": {},
     "HORAIRE": {"heure": "8", "minute": "0", "jours": "* * * * *"},
     "FICHIER_MODIFIE": {"chemin": ""},
@@ -67,7 +67,7 @@ PARAMS_DEFAUT_DECLNCHEUR = {
 #------------------------------------------------------------------------------
 # Paramètres par défaut pour chaque action
 #------------------------------------------------------------------------------
-PARAMS_DEFAUT_ACTION = {
+ACTION_DEFAULT_PARAMS = {
     "NOTIFIER": {"titre": "Notification", "message": ""},
     "COPIER_FICHIER": {"source": "", "destination": "", "motif": "*"},
     "DEPLACER_FICHIER": {"source": "", "destination": ""},
@@ -80,7 +80,7 @@ PARAMS_DEFAUT_ACTION = {
 #------------------------------------------------------------------------------
 # Paramètres par défaut pour chaque contrainte
 #------------------------------------------------------------------------------
-PARAMS_DEFAUT_CONTRAINTES = {
+CONSTRAINT_DEFAULT_PARAMS = {
     "ESPACE_DISQUE": {"espace_minimum": "10"},
     "PLAGE_HORAIRE": {"heure_debut": "0800", "heure_fin": "1800"},
     "PROCESSUS_ACTIF": {"processus": ""}

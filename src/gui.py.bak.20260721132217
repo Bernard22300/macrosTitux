@@ -7,7 +7,7 @@
 
 from tkinter import ttk, messagebox, Listbox
 import os
-from model import generer_bash_depuis_xml, initialiser_dossiers
+from model import generate_bash_from_xml, init_dirs
 
 class MacrosTituxApp(ttk.Frame):
     """Application principale."""
@@ -18,9 +18,9 @@ class MacrosTituxApp(ttk.Frame):
         parent.title("macrosTitux v0.3")
         parent.geometry("900x600")
 
-        self.element_selectionne = None
+        self.selected_item = None
 
-        initialiser_dossiers()
+        init_dirs()
         self.setup_ui()
         self.refresh_list()
 
@@ -62,7 +62,7 @@ class MacrosTituxApp(ttk.Frame):
         btn_frame.pack(fill="x", padx=10, pady=10)
 
         ttk.Button(btn_frame, text="+ Nouvelle macro", command=self.new_macro).pack(side="left", padx=2)
-        ttk.Button(btn_frame, text="Éditer", command=self.edit_macro).pack(side="left", padx=2)
+        ttk.Button(btn_frame, text="Editer", command=self.edit_macro).pack(side="left", padx=2)
         ttk.Button(btn_frame, text="Supprimer", command=self.delete_macro).pack(side="left", padx=2)
         ttk.Button(btn_frame, text="Tester", command=self.test_macro).pack(side="left", padx=2)
         ttk.Button(btn_frame, text="Exporter", command=self.export_macro).pack(side="left", padx=2)
@@ -115,7 +115,7 @@ class MacrosTituxApp(ttk.Frame):
         for f in files:
             xml_path = os.path.join(macros_dir, f)
             try:
-                info = generer_bash_depuis_xml(xml_path, dry_run=True)
+                info = generate_bash_from_xml(xml_path, dry_run=True)
                 nom = info.get("name", f.replace(".xml", ""))
                 trigger = info.get("trigger_type", "Inconnu")
                 actions = info.get("actions", [])
@@ -127,7 +127,7 @@ class MacrosTituxApp(ttk.Frame):
 
     def on_select(self, event=None):
         selection = self.tree.selection()
-        self.element_selectionne = selection[0] if selection else None
+        self.selected_item = selection[0] if selection else None
 
     def new_macro(self):
         from dialogs import NewMacroDialog
@@ -136,45 +136,45 @@ class MacrosTituxApp(ttk.Frame):
         if dialog.result:
             name, trigger, variables, actions, constraints = dialog.result
             from model import save_macro
-            sauvegarder_macro(name, trigger, variables, actions, constraints)
+            save_macro(name, trigger, variables, actions, constraints)
             self.refresh_list()
 
     def edit_macro(self):
-        if not self.element_selectionne:
+        if not self.selected_item:
             messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
         messagebox.showinfo("Info", "Fonctionnalite non implantee pour le moment.")
 
-    def supprimer_macro(self):
-        if not self.element_selectionne:
+    def delete_macro(self):
+        if not self.selected_item:
             messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        result = messagebox.askyesno("Confirmation", "Supprimer la macro " + self.element_selectionne + "?")
+        result = messagebox.askyesno("Confirmation", "Supprimer la macro " + self.selected_item + "?")
         if result:
             from model import delete_macro
-            supprimer_macro(self.element_selectionne)
+            delete_macro(self.selected_item)
             self.refresh_list()
 
     def test_macro(self):
-        if not self.element_selectionne:
+        if not self.selected_item:
             messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        macro_file = self.element_selectionne
+        macro_file = self.selected_item
         macro_dir = os.path.expanduser("~/.config/macrosTitux/macros/")
-        sh_content, sh_path = generer_bash_depuis_xml(os.path.join(macro_dir, macro_file), dry_run=False)
+        sh_content, sh_path = generate_bash_from_xml(os.path.join(macro_dir, macro_file), dry_run=False)
         with open(sh_path, "w", encoding="utf-8") as f:
             f.write(sh_content)
         os.chmod(sh_path, 0o755)
         os.system("xterm -hold -e bash " + sh_path)
 
     def export_macro(self):
-        if not self.element_selectionne:
+        if not self.selected_item:
             messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
         import shutil
         macro_dir = os.path.expanduser("~/.config/macrosTitux/macros/")
-        dest = os.path.join(os.getcwd(), self.element_selectionne)
-        shutil.copy(os.path.join(macro_dir, self.element_selectionne), dest)
+        dest = os.path.join(os.getcwd(), self.selected_item)
+        shutil.copy(os.path.join(macro_dir, self.selected_item), dest)
         messagebox.showinfo("Info", "Macro exportee dans le dossier projet")
 
     def import_macro(self):

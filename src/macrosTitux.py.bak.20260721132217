@@ -20,9 +20,9 @@ from gui import MacrosTituxApp
 from model import init_dirs
 from tkinter import Tk
 
-def principal():
+def main():
     """Point d'entrée de l'application."""
-    initialiser_dossiers()
+    init_dirs()
 
     root = Tk()
     app = MacrosTituxApp(root)
