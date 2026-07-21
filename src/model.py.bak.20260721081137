@@ -22,12 +22,12 @@ def init_dirs():
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     MACRO_DIR.mkdir(parents=True, exist_ok=True)
     if not CONF_FILE.exists():
-        with open(CONF_FILE, 'w', encoding='utf-8') as f:
+        with open(CONF_FILE, 'w') as f:
             json.dump(DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
 
 def load_config():
     """Charge la configuration utilisateur."""
-    with open(CONF_FILE, 'r', encoding='utf-8') as f:
+    with open(CONF_FILE, 'r') as f:
         return json.load(f)
 
 def load_macros_list():
@@ -97,56 +97,9 @@ def save_macro(name, trigger_data, variables, actions, constraints):
     with open(MACRO_DIR / f"{name}.xml", 'wb') as f:
         tree.write(f, encoding='utf-8', xml_declaration=True)
 
-def delete_macro(macro_name):
-    """Supprime une macro XML."""
-    macro_path = MACRO_DIR / f"{macro_name}.xml"
-    if macro_path.exists():
-        macro_path.unlink()
-        # Supprimer aussi le fichier Bash associé
-        sh_path = MACRO_DIR / f"{macro_name}.sh"
-        if sh_path.exists():
-            sh_path.unlink()
-
-def generate_bash_from_xml(xml_path, output_path=None, dry_run=False):
-    """Convertit un XML en script Bash et retourne les infos de la macro.
-
-    Args:
-        xml_path: Chemin vers le fichier XML
-        output_path: Chemin de sortie du script (optionnel)
-        dry_run: Si True, retourne seulement les infos sans générer
-
-    Returns:
-        dict: Informations sur la macro (name, trigger_type, actions...)
-    """
-    # Parser le XML pour extraire les infos
-    tree = ET.parse(xml_path)
-    root = tree.getroot()
-
-    info = {
-        'name': root.get('name', ''),
-        'trigger_type': root.find('trigger').get('type', 'Inconnu') if root.find('trigger') is not None else 'Inconnu',
-        'actions': []
-    }
-
-    actions_elem = root.find('actions')
-    if actions_elem is not None:
-        for action in actions_elem.findall('action'):
-            info['actions'].append({
-                'id': action.get('id'),
-                'type': action.get('type'),
-                'label': action.get('label', '')
-            })
-
-    if not dry_run:
-        # Générer le script Bash via le shell script
-        script_path = Path(__file__).parent / "generate_bash.sh"
-        if output_path is None:
-            output_path = str(xml_path).replace('.xml', '.sh')
-
-        result = os.system(f"bash \"{script_path}\" \"{xml_path}\" \"{output_path}\"")
-        if result != 0:
-            raise RuntimeError(f"Échec de génération du script Bash: {xml_path}")
-
-        info['output_path'] = output_path
-
-    return info
+def generate_bash_from_xml(xml_path, output_path=None):
+    """Exécute le script de conversion XML → Bash."""
+    script_path = Path(__file__).parent / "generate_bash.sh"
+    if output_path is None:
+        output_path = str(xml_path).replace('.xml', '.sh')
+    os.system(f"bash {script_path} {xml_path} {output_path}")
