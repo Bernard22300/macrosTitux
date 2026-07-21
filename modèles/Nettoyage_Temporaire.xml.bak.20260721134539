@@ -6,7 +6,7 @@
             <param key="minute" value="0"/>
             <param key="jours" value="* * * * *"/>
         </config>
-    </declencheur>
+    </trigger>
     <variables>
         <var name="TMP_DIR" value="/tmp"/>
     </variables>
@@ -29,12 +29,12 @@
             </config>
         </action>
     </actions>
-    <contraintes>
+    <constraints>
         <constraint id="1" type="PLAGE_HORAIRE" label="Plage horaire">
             <config>
                 <param key="heure_debut" value="2200"/>
                 <param key="heure_fin" value="2359"/>
             </config>
-        </contrainte>
-    </contraintes>
+        </constraint>
+    </constraints>
 </macro>

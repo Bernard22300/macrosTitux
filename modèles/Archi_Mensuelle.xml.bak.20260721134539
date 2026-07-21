@@ -6,7 +6,7 @@
             <param key="minute" value="0"/>
             <param key="jours" value="01 * * *"/>
         </config>
-    </declencheur>
+    </trigger>
     <variables>
         <var name="MOIS" value="$(date +%Y%m)"/>
         <var name="ARCHIVE_NAME" value="PDF_Archive_${MOIS}.tar.gz"/>
@@ -31,11 +31,11 @@
             </config>
         </action>
     </actions>
-    <contraintes>
+    <constraints>
         <constraint id="1" type="ESPACE_DISQUE" label="Espace disque">
             <config>
                 <param key="espace_minimum" value="20"/>
             </config>
-        </contrainte>
-    </contraintes>
+        </constraint>
+    </constraints>
 </macro>

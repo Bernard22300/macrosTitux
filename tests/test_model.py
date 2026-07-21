@@ -67,7 +67,7 @@ class TestModel:
 
         fichier_xml = dossier_temporaire / "Test_Macro_2.xml"
         tree = ET.parse(fichier_xml)
-        trigger = tree.find('.//trigger')
+        trigger = tree.find('.//declencheur')
         assert trigger is not None
         assert trigger.get('type') == 'HORAIRE'
 

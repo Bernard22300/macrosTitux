@@ -37,7 +37,7 @@ def charger_liste_macros():
         tree = ET.parse(f)
         root = tree.getroot()
         name = root.get('name')
-        trigger_label = root.find('declencheur').get('label', '-') if root.find('declencheur') is not None else '-'
+        trigger_label = root.find('trigger').get('label', '-') if root.find('trigger') is not None else '-'
         actions = root.findall('actions/action')
         action_label = actions[0].get('label', '-') if actions else '-'
         macros.append((name, trigger_label, action_label))
@@ -49,12 +49,12 @@ def sauvegarder_macro(name, donnees_declencheur, variables, actions, constraints
     root.set('name', name)
 
     # Trigger
-    trigger = ET.SubElement(root, "declencheur")
+    trigger = ET.SubElement(root, "trigger")
     trigger.set('type', donnees_declencheur['type'])
     trigger.set('label', donnees_declencheur['label'])
     trigger_cfg = ET.SubElement(trigger, "config")
     for k, v in donnees_declencheur['params'].items():
-        param = ET.SubElement(trigger_cfg, "parametre")
+        param = ET.SubElement(trigger_cfg, "param")
         param.set('key', k)
         param.set('value', str(v))
 
@@ -62,7 +62,7 @@ def sauvegarder_macro(name, donnees_declencheur, variables, actions, constraints
     vars_elem = ET.SubElement(root, "variables")
     for var in variables:
         if var.get('name'):
-            v = ET.SubElement(vars_elem, "variable")
+            v = ET.SubElement(vars_elem, "var")
             v.set('name', var['name'])
             v.set('value', var.get('value', ''))
 
@@ -75,20 +75,20 @@ def sauvegarder_macro(name, donnees_declencheur, variables, actions, constraints
         action_el.set('label', action.get('label', ''))
         cfg = ET.SubElement(action_el, "config")
         for k, v in action.get('params', {}).items():
-            p = ET.SubElement(cfg, "parametre")
+            p = ET.SubElement(cfg, "param")
             p.set('key', k)
             p.set('value', str(v))
 
     # Contraintes
-    constraints_elem = ET.SubElement(root, "contraintes")
+    constraints_elem = ET.SubElement(root, "constraints")
     for constraint in constraints:
-        c_el = ET.SubElement(constraints_elem, "contrainte")
+        c_el = ET.SubElement(constraints_elem, "constraint")
         c_el.set('id', constraint.get('id', '1'))
         c_el.set('type', constraint['type'])
         c_el.set('label', constraint.get('label', ''))
         cfg = ET.SubElement(c_el, "config")
         for k, v in constraint.get('params', {}).items():
-            p = ET.SubElement(cfg, "parametre")
+            p = ET.SubElement(cfg, "param")
             p.set('key', k)
             p.set('value', str(v))
 
@@ -124,7 +124,7 @@ def generer_bash_depuis_xml(chemin_xml, chemin_sortie=None, simulation=False):
 
     info = {
         'name': root.get('name', ''),
-        'trigger_type': root.find('declencheur').get('type', 'Inconnu') if root.find('declencheur') is not None else 'Inconnu',
+        'trigger_type': root.find('trigger').get('type', 'Inconnu') if root.find('trigger') is not None else 'Inconnu',
         'actions': []
     }
 

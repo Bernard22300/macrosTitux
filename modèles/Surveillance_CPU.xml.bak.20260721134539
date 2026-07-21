@@ -6,7 +6,7 @@
             <param key="minute" value="*/30"/>
             <param key="jours" value="* * * * *"/>
         </config>
-    </declencheur>
+    </trigger>
     <variables>
         <var name="THRESHOLD" value="90"/>
     </variables>
@@ -23,11 +23,11 @@
             </config>
         </action>
     </actions>
-    <contraintes>
+    <constraints>
         <constraint id="1" type="PROCESSUS_ACTIF" label="Processus actif">
             <config>
                 <param key="processus" value="gnome-system-monitor"/>
             </config>
-        </contrainte>
-    </contraintes>
+        </constraint>
+    </constraints>
 </macro>

@@ -49,13 +49,13 @@ NOM_MACRO=$(extract_attr "//macro" "name")
 [[ -z "$NOM_MACRO" ]] && NOM_MACRO="macro_non_nomme"
 
 # Type de déclencheur
-TYPE_DECLNCHEUR=$(extract_attr "//declencheur" "type")
-LIBELLE_DECLNCHEUR=$(extract_attr "//declencheur" "label")
+TYPE_DECLNCHEUR=$(extract_attr "//trigger" "type")
+LIBELLE_DECLNCHEUR=$(extract_attr "//trigger" "label")
 
 # Paramètres du déclencheur
 declare -A PARAMS_DECLNCHEUR
-for key in $(xmllint --xpath "//declencheur/config/param/@key" "$ENTREE_XML" 2>/dev/null | sed 's/key="\([^"]*\)"/\1\n/g'); do
-    value=$(extract_param "//declencheur/config" "$key")
+for key in $(xmllint --xpath "//trigger/config/param/@key" "$ENTREE_XML" 2>/dev/null | sed 's/key="\([^"]*\)"/\1\n/g'); do
+    value=$(extract_param "//trigger/config" "$key")
     PARAMS_DECLNCHEUR["$key"]="$value"
 done
 
@@ -83,7 +83,7 @@ while IFS= read -r var_line; do
     if [[ -n "$var_name" ]]; then
         echo "$var_name=\"$var_value\"" >> "$SORTIE_SH"
     fi
-done < <(xmllint --xpath "//variables/variable" "$ENTREE_XML" 2>/dev/null | grep -oP 'name="\K[^"]+' | paste -d'|' - <(xmllint --xpath "//variables/variable" "$ENTREE_XML" 2>/dev/null | grep -oP 'value="\K[^"]+'))
+done < <(xmllint --xpath "//variables/var" "$ENTREE_XML" 2>/dev/null | grep -oP 'name="\K[^"]+' | paste -d'|' - <(xmllint --xpath "//variables/var" "$ENTREE_XML" 2>/dev/null | grep -oP 'value="\K[^"]+'))
 
 # Génération du corps selon le type de déclencheur
 echo "" >> "$SORTIE_SH"
@@ -167,12 +167,12 @@ while IFS='|' read -r c_type c_label c_params; do
             fi
             ;;
     esac
-done < <(xmllint --xpath "//contraintes/contrainte" "$ENTREE_XML" 2>/dev/null | \
+done < <(xmllint --xpath "//constraints/constraint" "$ENTREE_XML" 2>/dev/null | \
     grep -oP 'type="\K[^"]+' | paste -d'|' - \
-    <(xmllint --xpath "//contraintes/contrainte" "$ENTREE_XML" 2>/dev/null | \
+    <(xmllint --xpath "//constraints/constraint" "$ENTREE_XML" 2>/dev/null | \
         grep -oP 'label="\K[^"]+' | \
         paste -d'|' - \
-        <(xmllint --xpath "//contraintes/contrainte/config/param" "$ENTREE_XML" 2>/dev/null | \
+        <(xmllint --xpath "//constraints/constraint/config/param" "$ENTREE_XML" 2>/dev/null | \
             grep -oP 'key="\K[^"]+=[^"]*' | tr '\n' '&')))
 
 # Génération des actions

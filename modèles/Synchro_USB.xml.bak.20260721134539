@@ -4,7 +4,7 @@
         <config>
             <param key="peripherique" value="(tous)"/>
         </config>
-    </declencheur>
+    </trigger>
     <variables>
         <var name="USB_PATH" value="/media/bernard/"/>
         <var name="BACKUP_PATH" value="$HOME/backup/USB"/>
