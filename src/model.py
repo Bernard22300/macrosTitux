@@ -23,7 +23,7 @@ def initialiser_dossiers():
     DOSSIER_MACROS.mkdir(parents=True, exist_ok=True)
     if not FICHIER_CONF.exists():
         with open(FICHIER_CONF, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4, ensure_ascii=False)
+            json.dump(CONFIG_DEFAUT, f, indent=4, ensure_ascii=False)
 
 def charger_config():
     """Charge la configuration utilisateur."""
@@ -116,7 +116,7 @@ def generer_bash_depuis_xml(chemin_xml, chemin_sortie=None, simulation=False):
         simulation: Si True, retourne seulement les infos sans générer
 
     Returns:
-        dict: Informations sur la macro (name, trigger_type, actions...)
+        dict: Informations sur la macro (name, type_declencheur, actions...)
     """
     # Parser le XML pour extraire les infos
     tree = ET.parse(chemin_xml)
@@ -124,7 +124,7 @@ def generer_bash_depuis_xml(chemin_xml, chemin_sortie=None, simulation=False):
 
     info = {
         'name': root.get('name', ''),
-        'trigger_type': root.find('declencheur').get('type', 'Inconnu') if root.find('declencheur') is not None else 'Inconnu',
+        'type_declencheur': root.find('declencheur').get('type', 'Inconnu') if root.find('declencheur') is not None else 'Inconnu',
         'actions': []
     }
 
