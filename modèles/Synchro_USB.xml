@@ -1,32 +1,32 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <macro name="Synchro_USB">
-    <trigger type="USB_CONNECTE" label="USB connecté">
+    <declencheur type="USB_CONNECTE" label="USB connecté">
         <config>
-            <param key="peripherique" value="(tous)"/>
+            <parametre key="peripherique" value="(tous)"/>
         </config>
     </declencheur>
     <variables>
-        <var name="USB_PATH" value="/media/bernard/"/>
-        <var name="BACKUP_PATH" value="$HOME/backup/USB"/>
+        <variable name="USB_PATH" value="/media/bernard/"/>
+        <variable name="BACKUP_PATH" value="$HOME/backup/USB"/>
     </variables>
     <actions>
         <action id="1" type="NOTIFIER" label="Notifier">
             <config>
-                <param key="titre" value="USB detecte"/>
-                <param key="message" value="Demarrage de la synchro"/>
+                <parametre key="titre" value="USB detecte"/>
+                <parametre key="message" value="Demarrage de la synchro"/>
             </config>
         </action>
         <action id="2" type="COPIER_FICHIER" label="Copier fichier(s)">
             <config>
-                <param key="source" value="/media/bernard/*"/>
-                <param key="destination" value="$HOME/backup/USB"/>
-                <param key="motif" value="*.pdf,*.docx,*.jpg"/>
+                <parametre key="source" value="/media/bernard/*"/>
+                <parametre key="destination" value="$HOME/backup/USB"/>
+                <parametre key="motif" value="*.pdf,*.docx,*.jpg"/>
             </config>
         </action>
         <action id="3" type="NOTIFIER" label="Notifier">
             <config>
-                <param key="titre" value="Synchro terminee"/>
-                <param key="message" value="Fichiers copies vers backup"/>
+                <parametre key="titre" value="Synchro terminee"/>
+                <parametre key="message" value="Fichiers copies vers backup"/>
             </config>
         </action>
     </actions>

@@ -18,7 +18,7 @@ src/
 ├── macrosTitux.py          # Point dentree (main)
 ├── config.py               # Constantes (declencheurs, actions, contraintes)
 ├── model.py                # Moteur (sauvegarde XML, conversion Bash)
-├── widgets.py              # Composants GUI (TriggerWidget, ActionFrame...)
+├── fenetreEditionMacro.py  Composants d edition (TriggerWidget, ActionFrame...)
 ├── dialogs.py              # Dialogues (creation de macro)
 ├── gui.py                  # Interface principale (MacrosTituxApp)
 └── generate_bash.sh        # Convertisseur XML → Bash
@@ -65,7 +65,7 @@ tests/
 ├── test_config.py           # Tests des constantes
 ├── test_model.py            # Tests sauvegarde/chargement XML
 ├── test_generate_bash.py    # Tests conversion XML → Bash
-└── test_widgets.py          # Tests composants GUI
+└── test_fenetre_edition_macro.py          # Tests composants GUI
 
 ## Scripts utilitaires
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------------------------
-# Fichier: test_widgets.py
+# Fichier: test_fenetre_edition_macro.py
 # Description: Tests des widgets Tkinter
 # Encodage: fr_FR.UTF-8
 #------------------------------------------------------------------------------

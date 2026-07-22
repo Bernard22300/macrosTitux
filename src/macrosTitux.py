@@ -17,7 +17,7 @@ src_dir = Path(__file__).parent
 sys.path.insert(0, str(src_dir))
 
 from gui import MacrosTituxApp
-from model import init_dirs
+from model import initialiser_dossiers
 from tkinter import Tk
 
 def principal():
@@ -30,4 +30,4 @@ def principal():
     app.mainloop()
 
 if __name__ == "__main__":
-    main()
+    principal()

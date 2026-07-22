@@ -1,35 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <macro name="Sauvegarde_Journaliere">
-    <trigger type="HORAIRE" label="Horaire (cron)">
+    <declencheur type="HORAIRE" label="Horaire (cron)">
         <config>
-            <param key="heure" value="8"/>
-            <param key="minute" value="0"/>
-            <param key="jours" value="* * * * *"/>
+            <parametre key="heure" value="8"/>
+            <parametre key="minute" value="0"/>
+            <parametre key="jours" value="* * * * *"/>
         </config>
     </declencheur>
     <variables>
-        <var name="SOURCE" value="$HOME/Documents"/>
-        <var name="DEST" value="$HOME/backup/Documents"/>
+        <variable name="SOURCE" value="$HOME/Documents"/>
+        <variable name="DEST" value="$HOME/backup/Documents"/>
     </variables>
     <actions>
         <action id="1" type="COPIER_FICHIER" label="Copier fichier(s)">
             <config>
-                <param key="source" value="/home/bernard/Documents"/>
-                <param key="destination" value="/home/bernard/backup/Documents"/>
-                <param key="motif" value="*"/>
+                <parametre key="source" value="/home/bernard/Documents"/>
+                <parametre key="destination" value="/home/bernard/backup/Documents"/>
+                <parametre key="motif" value="*"/>
             </config>
         </action>
         <action id="2" type="NOTIFIER" label="Notifier">
             <config>
-                <param key="titre" value="Sauvegarde termine"/>
-                <param key="message" value="Documents sauvegardes avec succes"/>
+                <parametre key="titre" value="Sauvegarde termine"/>
+                <parametre key="message" value="Documents sauvegardes avec succes"/>
             </config>
         </action>
     </actions>
     <contraintes>
-        <constraint id="1" type="ESPACE_DISQUE" label="Espace disque">
+        <contrainte id="1" type="ESPACE_DISQUE" label="Espace disque">
             <config>
-                <param key="espace_minimum" value="10"/>
+                <parametre key="espace_minimum" value="10"/>
             </config>
         </contrainte>
     </contraintes>
