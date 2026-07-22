@@ -1,215 +1,170 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#------------------------------------------------------------------------------
-# Fichier: macro.py
-# Description: Classe Macro fonctionnelle (hérite de Macro_base)
-# Encodage: fr_FR.UTF-8
-#------------------------------------------------------------------------------
+"""
+Module pour la gestion des macros concrètes dans macrosTitux.
 
-import json
-from typing import List, Dict, Any
-from .macro_base import Macro_base
+Classe Macro : implémentation concrète de Macro_base.
+Gère la sauvegarde, chargement et compilation des macros.
+"""
+
+from typing import Any
+from pathlib import Path
+from datetime import datetime
+
+# Imports relatifs (compatibilité pytest avec sys.path)
+try:
+    from macro_base import Macro_base
+    from instruction_declencheur_base import InstructionDeclencheur_base
+    from instruction_action_base import InstructionAction_base
+    from instruction_contrainte_base import InstructionContrainte_base
+    from donnee_base import Donnee_base
+    from fonction_base import Fonction_de_base
+    import fonction_loader
+except ImportError:
+    from src.macro_base import Macro_base
+    from src.instruction_declencheur_base import InstructionDeclencheur_base
+    from src.instruction_action_base import InstructionAction_base
+    from src.instruction_contrainte_base import InstructionContrainte_base
+    from src.donnee_base import Donnee_base
+    from src.fonction_base import Fonction_de_base
+    from src import fonction_loader
 
 class Macro(Macro_base):
-    """Macro fonctionnelle : implémente le contrat défini par Macro_base."""
-
-    # -------------------------------------------------------------------------
-    # Constructeur
-    # -------------------------------------------------------------------------
-
-    def __init__(self):
-        super().__init__()
-        self.chemin_fichier = None
-
-    # -------------------------------------------------------------------------
-    # Gestion des données
-    # -------------------------------------------------------------------------
-
-    def ajouter_donnee(self, cle: str, type_donnee: str, valeur_par_defaut: Any):
-        """Ajoute une donnée dans la macro."""
-        donnee = {
-            "cle": cle,
-            "type": type_donnee,
-            "valeur": valeur_par_defaut
+    """
+    Classe concrète représentant une macro complète.
+    
+    Hérète de Macro_base et implémente :
+        - compiler() : génère le script Bash
+        - exporter() : sérialisation en dict (pour XML)
+    """
+    
+    def __init__(self, nom: str = "") -> None:
+        """
+        Initialise une nouvelle macro concrète.
+        
+        Args :
+            nom : nom de la macro (optionnel)
+        """
+        super().__init__(nom=nom)
+    
+    def compiler(self) -> str:
+        """
+        Génère le script Bash complet de cette macro.
+        
+        Structure :
+            #!/bin/bash
+            # Commentaire : nom, déclencheurs, actions, contraintes
+            # Code compilé des déclencheurs
+            # Code compilé des contraintes
+            # Code compilé des actions
+        """
+        lignes = []
+        
+        # En-tête
+        lignes.append("#!/bin/bash")
+        lignes.append(f"# Macro : {self._nom}")
+        lignes.append(f"# Généré le : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        lignes.append("")
+        
+        # Compilation des déclencheurs
+        if self._declencheurs:
+            lignes.append("# === DÉCLENCHEURS ===")
+            for decl in self._declencheurs:
+                code = decl.compiler()
+                if code:
+                    lignes.append(code)
+            lignes.append("")
+        
+        # Compilation des contraintes
+        if self._contraintes:
+            lignes.append("# === CONTRAINTES ===")
+            for contr in self._contraintes:
+                code = contr.compiler()
+                if code:
+                    lignes.append(f"if [ {code} ]; then")
+                    # Les actions seront indentées plus tard
+            lignes.append("# Fin des contraintes")
+            # Note: l'indentation sera gérée par le compilateur réel
+        
+        # Compilation des actions
+        if self._actions:
+            lignes.append("# === ACTIONS ===")
+            for act in self._actions:
+                code = act.compiler()
+                if code:
+                    lignes.append(code)
+        
+        return "\n".join(lignes)
+    
+    def exporter(self) -> dict[str, Any]:
+        """
+        Exporte cette macro au format dictionnaire.
+        
+        Returns :
+            Dictionnaire structuré pour sérialisation XML
+        """
+        return {
+            "nom": self._nom,
+            "declencheurs": [d.exporter() for d in self._declencheurs],
+            "actions": [a.exporter() for a in self._actions],
+            "contraintes": [c.exporter() for c in self._contraintes],
+            "donnees": [d.exporter() for d in self._donnees],
+            "resume": self.obtenir_resume()
         }
-        self.liste_donnees.append(donnee)
+    
+    def verifier_macre_valide(self) -> tuple[bool, list[str]]:
+        """
+        Vérifie si la macro est valide (avoir au moins un déclencheur + une action).
+        
+        Returns :
+            Tuple (est_valide, liste_erreurs)
+        """
+        erreurs = []
+        
+        if not self._nom:
+            erreurs.append("La macro n'a pas de nom")
+        
+        if not self._declencheurs:
+            erreurs.append("La macro n'a aucun déclencheur")
+        
+        if not self._actions:
+            erreurs.append("La macro n'a aucune action")
+        
+        return len(erreurs) == 0, erreurs
+    
+    def __repr__(self) -> str:
+        """Représentation textuelle pour débogage."""
+        return f"Macro(nom='{self._nom}', déclencheurs={len(self._declencheurs)}, actions={len(self._actions)}, contraintes={len(self._contraintes)})"
 
-    def supprimer_donnee(self, index: int):
-        """Supprime une donnée par son index."""
-        if 0 <= index < len(self.liste_donnees):
-            del self.liste_donnees[index]
+# ============================================================================
+# FONCTIONS UTILITAIRES
+# ============================================================================
 
-    def editer_donnee(self, index: int, nouvelle_valeur: Any):
-        """Modifie une donnée par son index."""
-        if 0 <= index < len(self.liste_donnees):
-            self.liste_donnees[index]["valeur"] = nouvelle_valeur
+def creer_macre_vide(nom: str = "Nouvelle_Macro") -> Macro:
+    """
+    Crée une nouvelle macro vide prête à être configurée.
+    
+    Args :
+        nom : nom de la macro
+        
+    Returns :
+        Instance de Macro vierge
+    """
+    return Macro(nom=nom)
 
-    def lister_donnees(self) -> List[Dict[str, Any]]:
-        """Retourne la liste complète des données."""
-        return self.liste_donnees.copy()
-
-    # -------------------------------------------------------------------------
-    # Gestion des déclencheurs
-    # -------------------------------------------------------------------------
-
-    def ajouter_declencheur(self, type_declencheur: str, parametres: Dict[str, Any]):
-        """Ajoute un déclencheur."""
-        declencheur = {
-            "type": type_declencheur,
-            "params": parametres.copy() if parametres else {}
-        }
-        self.liste_declencheurs.append(declencheur)
-
-    def supprimer_declencheur(self, index: int):
-        """Supprime un déclencheur par son index."""
-        if 0 <= index < len(self.liste_declencheurs):
-            del self.liste_declencheurs[index]
-
-    def editer_declencheur(self, index: int, donnees_macro: Dict[str, Any]):
-        """Modifie un déclencheur par son index. La Macro propose ses données."""
-        # TODO: Ouvrir dialogue d'édition avec contexte des données
-        pass
-
-    def lister_declencheurs(self) -> List[str]:
-        """Retourne la liste des résumés des déclencheurs (une ligne chacun)."""
-        resumes = []
-        for d in self.liste_declencheurs:
-            resume = "{}: {}".format(d["type"], d["params"])
-            resumes.append(resume)
-        return resumes
-
-    # -------------------------------------------------------------------------
-    # Gestion des actions
-    # -------------------------------------------------------------------------
-
-    def ajouter_action(self, type_action: str, parametres: Dict[str, Any]):
-        """Ajoute une action."""
-        action = {
-            "type": type_action,
-            "params": parametres.copy() if parametres else {}
-        }
-        self.liste_actions.append(action)
-
-    def supprimer_action(self, index: int):
-        """Supprime une action par son index."""
-        if 0 <= index < len(self.liste_actions):
-            del self.liste_actions[index]
-
-    def editer_action(self, index: int, donnees_macro: Dict[str, Any]):
-        """Modifie une action par son index. La Macro propose ses données."""
-        # TODO: Ouvrir dialogue d'édition avec contexte des données
-        pass
-
-    def lister_actions(self) -> List[str]:
-        """Retourne la liste des résumés des actions (une ligne chacun)."""
-        resumes = []
-        for a in self.liste_actions:
-            resume = "{}: {}".format(a["type"], a["params"])
-            resumes.append(resume)
-        return resumes
-
-    # -------------------------------------------------------------------------
-    # Gestion des contraintes
-    # -------------------------------------------------------------------------
-
-    def ajouter_contrainte(self, type_contrainte: str, parametres: Dict[str, Any]):
-        """Ajoute une contrainte."""
-        contrainte = {
-            "type": type_contrainte,
-            "params": parametres.copy() if parametres else {}
-        }
-        self.liste_contraintes.append(contrainte)
-
-    def supprimer_contrainte(self, index: int):
-        """Supprime une contrainte par son index."""
-        if 0 <= index < len(self.liste_contraintes):
-            del self.liste_contraintes[index]
-
-    def editer_contrainte(self, index: int, donnees_macro: Dict[str, Any]):
-        """Modifie une contrainte par son index. La Macro propose ses données."""
-        # TODO: Ouvrir dialogue d'édition avec contexte des données
-        pass
-
-    def lister_contraintes(self) -> List[str]:
-        """Retourne la liste des résumés des contraintes (une ligne chacun)."""
-        resumes = []
-        for c in self.liste_contraintes:
-            resume = "{}: {}".format(c["type"], c["params"])
-            resumes.append(resume)
-        return resumes
-
-    # -------------------------------------------------------------------------
-    # Gestion de l'état d'exécution
-    # -------------------------------------------------------------------------
-
-    def activer(self):
-        """Marque la macro comme active."""
-        self.est_actif = True
-
-    def desactiver(self):
-        """Marque la macro comme inactive."""
-        self.est_actif = False
-
-    def lancer(self):
-        """Démarre l'exécution de la macro."""
-        if not self.est_actif:
-            return
-        self.en_cours = True
-
-    def arreter(self):
-        """Arrête l'exécution de la macro."""
-        self.en_cours = False
-
-    # -------------------------------------------------------------------------
-    # Affichage et résumés
-    # -------------------------------------------------------------------------
-
-    def lire_commentaire(self) -> str:
-        """Retourne le commentaire de la macro."""
-        return self.commentaire
-
-    def lire_resume(self) -> str:
-        """Retourne un résumé texte sur une ligne (pour l'affichage liste)."""
-        nb_declencheurs = len(self.liste_declencheurs)
-        nb_actions = len(self.liste_actions)
-        return "{} : {} déclencheur(s), {} action(s)".format(
-            self.nom,
-            nb_declencheurs,
-            nb_actions
-        )
-
-    # -------------------------------------------------------------------------
-    # Persistance
-    # -------------------------------------------------------------------------
-
-    def sauvegarder(self, chemin_fichier: str):
-        """Sauvegarde la macro dans un fichier."""
-        donnees = {
-            "nom": self.nom,
-            "commentaire": self.commentaire,
-            "liste_donnees": self.liste_donnees,
-            "liste_declencheurs": self.liste_declencheurs,
-            "liste_actions": self.liste_actions,
-            "liste_contraintes": self.liste_contraintes,
-            "est_actif": self.est_actif,
-            "en_cours": self.en_cours
-        }
-
-        with open(chemin_fichier, "w", encoding="utf-8") as f:
-            json.dump(donnees, f, ensure_ascii=False, indent=2)
-
-        self.chemin_fichier = chemin_fichier
-
-    def charger(self, chemin_fichier: str):
-        """Charge la macro depuis un fichier."""
-        with open(chemin_fichier, "r", encoding="utf-8") as f:
-            donnees = json.load(f)
-
-        self.nom = donnees.get("nom", "")
-        self.commentaire = donnees.get("commentaire", "")
-        self.liste_donnees = donnees.get("liste_donnees", [])
-        self.liste_declencheurs = donnees.get("liste_declencheurs", [])
-        self.liste_actions = donnees.get("liste_actions", [])
-        self.liste_contraintes = donnees.get("liste_contraintes", [])
-        self.est_actif = donnees.get("est_actif", False)
-        self.en_cours = donnees.get("en_cours", False)
-        self.chemin_fichier = chemin_fichier
+def importer_macro_de_dict(donnees: dict[str, Any]) -> Macro:
+    """
+    Importe une macro depuis un dictionnaire (XML/JSON déserialisé).
+    
+    Args :
+        donnees : dictionnaire contenant les infos de la macro
+        
+    Returns :
+        Instance de Macro reconstruite
+    """
+    macro = Macro(nom=donnees.get("nom", ""))
+    
+    # Note: la reconstruction des déclencheurs/actions nécessite le système
+    # de plugin, donc c'est à implémenter ultérieurement
+    
+    return macro

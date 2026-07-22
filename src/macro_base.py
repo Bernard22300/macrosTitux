@@ -1,175 +1,170 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-#------------------------------------------------------------------------------
-# Fichier: macro_base.py
-# Description: Classe abstraite Macro_base - expression du besoin
-# Encodage: fr_FR.UTF-8
-#------------------------------------------------------------------------------
+"""
+Module pour la gestion des macros abstraites dans macrosTitux.
+
+Classe Macro_base : interface abstraite pour toutes les macros.
+Une macro regroupe des déclencheurs, actions et contraintes.
+"""
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Any
+from pathlib import Path
+
+# Imports relatifs (compatibilité pytest avec sys.path)
+try:
+    from instruction_declencheur_base import InstructionDeclencheur_base
+    from instruction_action_base import InstructionAction_base
+    from instruction_contrainte_base import InstructionContrainte_base
+    from donnee_base import Donnee_base
+except ImportError:
+    from src.instruction_declencheur_base import InstructionDeclencheur_base
+    from src.instruction_action_base import InstructionAction_base
+    from src.instruction_contrainte_base import InstructionContrainte_base
+    from src.donnee_base import Donnee_base
 
 class Macro_base(ABC):
-    """Décrit le minimum nécessaire pour écrire une classe Macro fonctionnelle."""
-
-    def __init__(self):
-        # Informations générales
-        self.nom = ""
-        self.commentaire = ""
-
-        # Les 4 listes
-        self.liste_donnees = []
-        self.liste_declencheurs = []
-        self.liste_actions = []
-        self.liste_contraintes = []
-
-        # État d'exécution
-        self.est_actif = False
-        self.en_cours = False
-
-    # ==========================================================================
-    # Gestion des données
-    # ==========================================================================
-
+    """
+    Classe abstraite de base pour toutes les macros.
+    
+    Une macro est un ensemble de :
+        - Déclencheurs : définissent QUAND la macro s'exécute
+        - Actions : définissent QUOI faire quand elle s'exécute
+        - Contraintes : conditions à respecter pour l'exécution
+    
+    Méthodes abstraites à implémenter :
+        compiler() : génère le script Bash correspondant
+        exporter() : sérialisation au format XML/JSON
+    """
+    
+    def __init__(self, nom: str = "") -> None:
+        """
+        Initialise une nouvelle macro.
+        
+        Args :
+            nom : nom de la macro (optionnel)
+        """
+        self._nom: str = nom
+        self._declencheurs: List[InstructionDeclencheur_base] = []
+        self._actions: List[InstructionAction_base] = []
+        self._contraintes: List[InstructionContrainte_base] = []
+        self._donnees: List[Donnee_base] = []
+    
+    @property
+    def nom(self) -> str:
+        """Retourne le nom de la macro."""
+        return self._nom
+    
+    @nom.setter
+    def nom(self, valeur: str) -> None:
+        """Définit le nom de la macro."""
+        self._nom = valeur
+    
+    def obtenir_declencheurs(self) -> List[InstructionDeclencheur_base]:
+        """Retourne la liste des déclencheurs."""
+        return self._declencheurs.copy()
+    
+    def obtenir_actions(self) -> List[InstructionAction_base]:
+        """Retourne la liste des actions."""
+        return self._actions.copy()
+    
+    def obtenir_contraintes(self) -> List[InstructionContrainte_base]:
+        """Retourne la liste des contraintes."""
+        return self._contraintes.copy()
+    
+    def obtenir_donnees(self) -> List[Donnee_base]:
+        """Retourne la liste des données."""
+        return self._donnees.copy()
+    
+    def ajouter_declencheur(self, declencheur: InstructionDeclencheur_base) -> None:
+        """
+        Ajoute un déclencheur à la macro.
+        
+        Args :
+            declencheur : instance d'un déclencheur (hérite de InstructionDeclencheur_base)
+        """
+        if not isinstance(declencheur, InstructionDeclencheur_base):
+            raise TypeError("Doit être une instance de InstructionDeclencheur_base")
+        self._declencheurs.append(declencheur)
+    
+    def ajouter_action(self, action: InstructionAction_base) -> None:
+        """
+        Ajoute une action à la macro.
+        
+        Args :
+            action : instance d'une action (hérite de InstructionAction_base)
+        """
+        if not isinstance(action, InstructionAction_base):
+            raise TypeError("Doit être une instance de InstructionAction_base")
+        self._actions.append(action)
+    
+    def ajouter_contrainte(self, contrainte: InstructionContrainte_base) -> None:
+        """
+        Ajoute une contrainte à la macro.
+        
+        Args :
+            contrainte : instance d'une contrainte (hérite de InstructionContrainte_base)
+        """
+        if not isinstance(contrainte, InstructionContrainte_base):
+            raise TypeError("Doit être une instance de InstructionContrainte_base")
+        self._contraintes.append(contrainte)
+    
+    def ajouter_donnee(self, donnee: Donnee_base) -> None:
+        """
+        Ajoute une donnée à la macro.
+        
+        Args :
+            donnee : instance d'une donnée (hérite de Donnee_base)
+        """
+        if not isinstance(donnee, Donnee_base):
+            raise TypeError("Doit être une instance de Donnee_base")
+        self._donnees.append(donnee)
+    
     @abstractmethod
-    def ajouter_donnee(self, cle: str, type_donnee: str, valeur_par_defaut: Any):
-        """Ajoute une donnée dans la macro."""
+    def compiler(self) -> str:
+        """
+        GÉNÈRE LE CODE BASH COMPLET DE CETTE MACRO.
+        
+        Cette méthode doit être implémentée pour chaque type de macro
+        afin de produire le code Bash approprié.
+        
+        Returns :
+            Chaîne de caractères contenant le script Bash complet
+        
+        Exemple :
+            #!/bin/bash
+            # Macro: Test
+            # Déclencheur: DEMARRAGE
+            notify-send "Bonjour" "Monde"
+        """
         pass
-
+    
     @abstractmethod
-    def supprimer_donnee(self, index: int):
-        """Supprime une donnée par son index."""
+    def exporter(self) -> dict[str, Any]:
+        """
+        Exporte cette macro au format dictionnaire.
+        
+        Utilisé pour la sérialisation (XML, JSON, etc.)
+        
+        Returns :
+            Dictionnaire contenant toutes les infos de la macro
+        """
         pass
-
-    @abstractmethod
-    def editer_donnee(self, index: int, nouvelle_valeur: Any):
-        """Modifie une donnée par son index."""
-        pass
-
-    @abstractmethod
-    def lister_donnees(self) -> List[Dict[str, Any]]:
-        """Retourne la liste complète des données."""
-        pass
-
-    # ==========================================================================
-    # Gestion des déclencheurs
-    # ==========================================================================
-
-    @abstractmethod
-    def ajouter_declencheur(self, type_declencheur: str, parametres: Dict[str, Any]):
-        """Ajoute un déclencheur."""
-        pass
-
-    @abstractmethod
-    def supprimer_declencheur(self, index: int):
-        """Supprime un déclencheur par son index."""
-        pass
-
-    @abstractmethod
-    def editer_declencheur(self, index: int, donnees_macro: Dict[str, Any]):
-        """Modifie un déclencheur par son index. La Macro propose ses données."""
-        pass
-
-    @abstractmethod
-    def lister_declencheurs(self) -> List[str]:
-        """Retourne la liste des résumés des déclencheurs (une ligne chacun)."""
-        pass
-
-    # ==========================================================================
-    # Gestion des actions
-    # ==========================================================================
-
-    @abstractmethod
-    def ajouter_action(self, type_action: str, parametres: Dict[str, Any]):
-        """Ajoute une action."""
-        pass
-
-    @abstractmethod
-    def supprimer_action(self, index: int):
-        """Supprime une action par son index."""
-        pass
-
-    @abstractmethod
-    def editer_action(self, index: int, donnees_macro: Dict[str, Any]):
-        """Modifie une action par son index. La Macro propose ses données."""
-        pass
-
-    @abstractmethod
-    def lister_actions(self) -> List[str]:
-        """Retourne la liste des résumés des actions (une ligne chacun)."""
-        pass
-
-    # ==========================================================================
-    # Gestion des contraintes
-    # ==========================================================================
-
-    @abstractmethod
-    def ajouter_contrainte(self, type_contrainte: str, parametres: Dict[str, Any]):
-        """Ajoute une contrainte."""
-        pass
-
-    @abstractmethod
-    def supprimer_contrainte(self, index: int):
-        """Supprime une contrainte par son index."""
-        pass
-
-    @abstractmethod
-    def editer_contrainte(self, index: int, donnees_macro: Dict[str, Any]):
-        """Modifie une contrainte par son index. La Macro propose ses données."""
-        pass
-
-    @abstractmethod
-    def lister_contraintes(self) -> List[str]:
-        """Retourne la liste des résumés des contraintes (une ligne chacun)."""
-        pass
-
-    # ==========================================================================
-    # Gestion de l'état d'exécution
-    # ==========================================================================
-
-    @abstractmethod
-    def activer(self):
-        """Marque la macro comme active."""
-        pass
-
-    @abstractmethod
-    def desactiver(self):
-        """Marque la macro comme inactive."""
-        pass
-
-    @abstractmethod
-    def lancer(self):
-        """Démarre l'exécution de la macro."""
-        pass
-
-    @abstractmethod
-    def arreter(self):
-        """Arrête l'exécution de la macro."""
-        pass
-
-    # ==========================================================================
-    # Affichage et résumés
-    # ==========================================================================
-
-    @abstractmethod
-    def lire_commentaire(self) -> str:
-        """Retourne le commentaire de la macro."""
-        pass
-
-    @abstractmethod
-    def lire_resume(self) -> str:
-        """Retourne un résumé texte sur une ligne (pour l'affichage liste)."""
-        pass
-
-    # ==========================================================================
-    # Persistance
-    # ==========================================================================
-
-    @abstractmethod
-    def sauvegarder(self, chemin_fichier: str):
-        """Sauvegarde la macro dans un fichier."""
-        pass
-
-    @abstractmethod
-    def charger(self, chemin_fichier: str):
-        """Charge la macro depuis un fichier."""
-        pass
+    
+    def obtenir_resume(self) -> str:
+        """
+        Retourne un résumé court de la macro.
+        
+        Format : "[NOM] X déclencheur(s), Y action(s), Z contrainte(s)"
+        
+        Returns :
+            Chaîne résumant la macro
+        """
+        return (
+            f"[{self._nom}] {len(self._declencheurs)} déclencheur(s), "
+            f"{len(self._actions)} action(s), {len(self._contraintes)} contrainte(s)"
+        )
+    
+    def __repr__(self) -> str:
+        """Représentation textuelle pour débogage."""
+        return f"Macro(nom='{self._nom}', déclencheurs={len(self._declencheurs)}, actions={len(self._actions)})"
