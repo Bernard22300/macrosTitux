@@ -5,9 +5,11 @@
 # Encodage: fr_FR.UTF-8
 #------------------------------------------------------------------------------
 
-from tkinter import ttk, messagebox, Listbox
+from tkinter import ttk, messagebox, Listbox, X, W, E
 import os
 from model import generer_bash_depuis_xml, initialiser_dossiers
+from fonction_loader import obtenir_toutes_les_fonctions, scanner_fonctions_actives
+from pathlib import Path
 
 class MacrosTituxApp(ttk.Frame):
     """Application principale."""
@@ -15,7 +17,7 @@ class MacrosTituxApp(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
-        parent.title("macrosTitux v0.3")
+        parent.title("macrosTitux v0.4c")
         parent.geometry("900x600")
 
         self.element_selectionne = None
@@ -34,9 +36,9 @@ class MacrosTituxApp(ttk.Frame):
         tabs.add(onglet_macros, text="Macros")
         self.configurer_onglet_macros(onglet_macros)
 
-        onglet_modeles = ttk.Frame(tabs)
-        tabs.add(onglet_modeles, text="Modeles")
-        self.configurer_onglet_modeles(onglet_modeles)
+        onglet_fonctions = ttk.Frame(tabs)
+        tabs.add(onglet_fonctions, text="Fonctionnalites")
+        self.configurer_onglet_fonctions(onglet_fonctions)
 
         onglet_parametres = ttk.Frame(tabs)
         tabs.add(onglet_parametres, text="Parametres")
@@ -68,37 +70,193 @@ class MacrosTituxApp(ttk.Frame):
         ttk.Button(cadre_boutons, text="Exporter", command=self.exporter_macro).pack(side="left", padx=2)
         ttk.Button(cadre_boutons, text="Importer", command=self.importer_macro).pack(side="left", padx=2)
 
-    def configurer_onglet_modeles(self, parent):
-        titre_label = ttk.Label(parent, text="Modeles disponibles", font=("Arial", 12, "bold"))
+    def configurer_onglet_fonctions(self, parent):
+        """Onglet pour gerer les fonctions actives/inactives."""
+        
+        # Titre
+        titre_label = ttk.Label(parent, text="Gestion des fonctionnalites", font=("Arial", 12, "bold"))
         titre_label.pack(pady=10)
+        
+        # Instructions
+        info_label = ttk.Label(parent, text="Activez ou desactivez les fonctions selon vos besoins.\nRedemarrage de l'application necessaire pour prendre en compte.", foreground="gray")
+        info_label.pack(pady=5)
+        
+        # Zone de scroll pour la liste des fonctions
+        cadre_liste = ttk.Frame(parent)
+        cadre_liste.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        defilement_x = ttk.Scrollbar(cadre_liste, orient="horizontal")
+        defilement_x.pack(side="bottom", fill="x")
+        
+        defilement_y = ttk.Scrollbar(cadre_liste, orient="vertical")
+        defilement_y.pack(side="right", fill="y")
+        
+        # Treeview pour afficher les fonctions
+        colonnes_fonctions = ("identificateur", "description", "statut", "actions")
+        self.tree_fonctions = ttk.Treeview(cadre_liste, columns=colonnes_fonctions, show="headings", yscrollcommand=defilement_y.set, xscrollcommand=defilement_x.set)
+        self.tree_fonctions.heading("identificateur", text="Identificateur")
+        self.tree_fonctions.heading("description", text="Description")
+        self.tree_fonctions.heading("statut", text="Statut")
+        self.tree_fonctions.column("identificateur", width=200)
+        self.tree_fonctions.column("description", width=400)
+        self.tree_fonctions.column("statut", width=80)
+        self.tree_fonctions.column("actions", width=120)
+        self.tree_fonctions.pack(fill="both", expand=True)
+        
+        defilement_y.configure(command=self.tree_fonctions.yview)
+        defilement_x.configure(command=self.tree_fonctions.xview)
+        
+        # Boutons d'action
+        cadre_boutons_fonctions = ttk.Frame(parent)
+        cadre_boutons_fonctions.pack(fill="x", padx=20, pady=10)
+        
+        ttk.Button(cadre_boutons_fonctions, text="Actualiser", command=self.actualiser_fonctions).pack(side="left", padx=5)
+        ttk.Button(cadre_boutons_fonctions, text="Activer selectionnee", command=self.activer_fonction_selectionnee).pack(side="left", padx=5)
+        ttk.Button(cadre_boutons_fonctions, text="Desactiver selectionnee", command=self.desactiver_fonction_selectionnee).pack(side="left", padx=5)
+        
+        # Initialiser l'affichage
+        self.actualiser_fonctions()
 
-        dossier_modeles = os.path.join(os.path.dirname(__file__), "..", "modeles")
-        dossier_modeles = os.path.abspath(dossier_modeles)
+    def actualiser_fonctions(self):
+        """Actualise la liste des fonctions dans l'onglet Fonctionnalites."""
+        
+        # Vider la treeview
+        for item in self.tree_fonctions.get_children():
+            self.tree_fonctions.delete(item)
+        
+        # Chemins
+        src_dir = Path(__file__).parent
+        possibles_dir = src_dir / "fonctions" / "possibles"
+        actives_dir = src_dir / "fonctions" / "actives"
+        
+        # Scanner les fichiers disponibles
+        if not possibles_dir.exists():
+            return
+        
+        for f in possibles_dir.glob("*.py"):
+            if f.name.startswith("_"):
+                continue
+            
+            nom_fonction = f.stem
+            chemin_complet = str(f)
+            
+            # Verifier si active (lien symbolique existe)
+            lien_actif = actives_dir / f"{nom_fonction}.py"
+            est_active = lien_actif.exists() or lien_actif.is_symlink()
+            
+            # Essayer de charger la fonction pour obtenir la description
+            try:
+                # Import temporaire pour recuperer la classe
+                import sys
+                sys.path.insert(0, str(possibles_dir))
+                module = __import__(nom_fonction)
+                
+                # Trouver la classe qui herite de Fonction_de_base
+                description = "Description inconnue"
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if isinstance(attr, type) and hasattr(attr, '__bases__'):
+                        from fonction_base import Fonction_de_base
+                        if issubclass(attr, Fonction_de_base) and attr != Fonction_de_base:
+                            instance = attr()
+                            description = instance.description
+                            break
+                
+                # Nettoyer le sys.path
+                sys.path.remove(str(possibles_dir))
+            except Exception as e:
+                description = f"Erreur chargement: {str(e)[:30]}"
+            
+            # Statut
+            statut = "ACTIVE" if est_active else "inactive"
+            couleur_statut = "green" if est_active else "gray"
+            
+            # Inscrire dans la treeview
+            self.tree_fonctions.insert("", "end", iid=nom_fonction, values=(nom_fonction, description, statut))
+        
+        # Colorer les statuts
+        for item in self.tree_fonctions.get_children():
+            valeurs = self.tree_fonctions.item(item, "values")
+            if valeurs and valeurs[2] == "ACTIVE":
+                self.tree_fonctions.tag_configure("actif", foreground="green")
+                self.tree_fonctions.item(item, tags=("actif",))
 
-        if os.path.isdir(dossier_modeles):
-            fichiers_modeles = [f for f in os.listdir(dossier_modeles) if f.endswith(".xml")]
-            if fichiers_modeles:
-                self.listbox_modeles = Listbox(parent, selectmode="single", height=8)
-                self.listbox_modeles.pack(fill="both", expand=True, padx=20, pady=10)
-                for m in fichiers_modeles:
-                    self.listbox_modeles.insert("end", m.replace(".xml", ""))
+    def activer_fonction_selectionnee(self):
+        """Active la fonction selectionnee en creant un lien symbolique."""
+        selection = self.tree_fonctions.selection()
+        if not selection:
+            messagebox.showwarning("Attention", "Selectionnez une fonction.")
+            return
+        
+        nom_fonction = selection[0]
+        src_dir = Path(__file__).parent
+        possibles_dir = src_dir / "fonctions" / "possibles"
+        actives_dir = src_dir / "fonctions" / "actives"
+        
+        source = possibles_dir / f"{nom_fonction}.py"
+        dest = actives_dir / f"{nom_fonction}.py"
+        
+        if not source.exists():
+            messagebox.showerror("Erreur", f"Fichier source introuvable: {source}")
+            return
+        
+        if dest.exists() or dest.is_symlink():
+            messagebox.showerror("Erreur", "Cette fonction est deja activee.")
+            return
+        
+        try:
+            actives_dir.mkdir(parents=True, exist_ok=True)
+            # Creer un lien symbolique relatif
+            lien_relatif = os.path.relpath(source, actives_dir)
+            os.symlink(lien_relatif, dest)
+            messagebox.showinfo("Succes", f"Fonction {nom_fonction} activee avec succes.")
+            self.actualiser_fonctions()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Echec de l'activation: {str(e)}")
 
-                cadre_boutons = ttk.Frame(parent)
-                cadre_boutons.pack(fill="x", padx=20, pady=10)
-                ttk.Button(cadre_boutons, text="Installer le modele selectionne",
-                          command=lambda: self.installer_modele(dossier_modeles)).pack(side="left")
-                ttk.Button(cadre_boutons, text="Ouvrir le dossier modeles",
-                          command=lambda: os.system("xdg-open " + dossier_modeles)).pack(side="left", padx=5)
-            else:
-                ttk.Label(parent, text="Aucun modele disponible").pack(pady=20)
-        else:
-            ttk.Label(parent, text="Dossier modeles inexistant").pack(pady=20)
+    def desactiver_fonction_selectionnee(self):
+        """Desactive la fonction selectionnee en supprimant le lien symbolique."""
+        selection = self.tree_fonctions.selection()
+        if not selection:
+            messagebox.showwarning("Attention", "Selectionnez une fonction.")
+            return
+        
+        nom_fonction = selection[0]
+        src_dir = Path(__file__).parent
+        actives_dir = src_dir / "fonctions" / "actives"
+        
+        lien = actives_dir / f"{nom_fonction}.py"
+        
+        if not lien.exists() and not lien.is_symlink():
+            messagebox.showerror("Erreur", "Cette fonction n'est pas activee.")
+            return
+        
+        try:
+            lien.unlink()
+            messagebox.showinfo("Succes", f"Fonction {nom_fonction} desactivee.")
+            self.actualiser_fonctions()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Echec de la desactivation: {str(e)}")
 
     def configurer_onglet_parametres(self, parent):
         ttk.Label(parent, text="Parametres de l'application", font=("Arial", 12, "bold")).pack(pady=10)
-        ttk.Label(parent, text="Version: 0.3", font=("Arial", 10)).pack(pady=5)
+        ttk.Label(parent, text="Version: 0.4c", font=("Arial", 10)).pack(pady=5)
         ttk.Label(parent, text="Licence: GPL-3.0", font=("Arial", 10)).pack(pady=5)
-
+        
+        # Section Fonctions actives (recapitulatif)
+        ttk.Label(parent, text="Fonctions actives (rapport)", font=("Arial", 10, "bold")).pack(pady=(20, 5))
+        
+        fonctions = obtenir_toutes_les_fonctions()
+        
+        if fonctions:
+            for ident, instance in fonctions.items():
+                cadre_fonction = ttk.Frame(parent)
+                cadre_fonction.pack(fill=X, padx=20, pady=2)
+                ttk.Label(cadre_fonction, text=f"✓ {ident}", foreground="green").pack(side="left")
+                ttk.Label(cadre_fonction, text=instance.description).pack(side="left", padx=10)
+        else:
+            ttk.Label(parent, text="Aucune fonction active", foreground="gray").pack(pady=10)
+        
         cadre_boutons = ttk.Frame(parent)
         cadre_boutons.pack(side="bottom", pady=20)
         ttk.Button(cadre_boutons, text="Quitter", command=self.quitter_application).pack(padx=5)
@@ -132,7 +290,6 @@ class MacrosTituxApp(ttk.Frame):
     def nouvelle_macro(self):
         from dialogs import DialogueNouvelleMacro
         dialogue = DialogueNouvelleMacro(self.parent)
-        pass
         if dialogue.result:
             nom, donnees_declencheur, variables, actions, contraintes = dialogue.result
             from model import sauvegarder_macro
@@ -159,14 +316,12 @@ class MacrosTituxApp(ttk.Frame):
         if not self.element_selectionne:
             messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        # Obtenir le nom depuis les valeurs du tree
         valeurs = self.tree.item(self.element_selectionne, "values")
         nom_macro = valeurs[0] if valeurs else self.element_selectionne
 
         dossier_macros = os.path.expanduser("~/.config/macrosTitux/macros/")
         chemin_xml = os.path.join(dossier_macros, nom_macro + ".xml")
 
-        # Afficher le XML dans la console
         print("\n" + "=" * 60)
         print(f"  XML de la macro: {nom_macro}")
         print("=" * 60)
@@ -174,7 +329,6 @@ class MacrosTituxApp(ttk.Frame):
             print(f.read())
         print("=" * 60 + "\n")
 
-        # Generer et executer le script Bash
         chemin_sh = os.path.join(dossier_macros, nom_macro + ".sh")
         try:
             infos = generer_bash_depuis_xml(chemin_xml, chemin_sortie=chemin_sh)
