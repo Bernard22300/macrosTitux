@@ -17,71 +17,31 @@ CONFIG_DEFAUT = {
 }
 
 #------------------------------------------------------------------------------
-# Déclencheurs disponibles (TYPE_CODE: Libellé affiché)
+# Declencheurs disponibles (TYPE_CODE: Libelle affiche)
 #------------------------------------------------------------------------------
-DECLNCHEURS = {
-    "DEMARRAGE": "Au démarrage",
-    "HORAIRE": "Horaire programmé",
-    "FICHIER_MODIFIE": "Fichier modifié",
-    "FICHIER_CREE": "Fichier créé",
-    "RESEAU_ACTIF": "Réseau actif détecté",
-    "SORTIE_TUBE": "Sortie de tube (named pipe)",
-    "USB_CONNECTE": "Périphérique USB connecté"
-}
+DECLENCHEURS = {}
 
 #------------------------------------------------------------------------------
-# Actions disponibles (TYPE_CODE: Libellé affiché)
+# Actions disponibles (TYPE_CODE: Libelle affiche)
 #------------------------------------------------------------------------------
-ACTIONS = {
-    "NOTIFIER": "Notifier l'utilisateur",
-    "COPIER_FICHIER": "Copier un fichier",
-    "DEPLACER_FICHIER": "Déplacer un fichier",
-    "SUPPRIMER_FICHIER": "Supprimer un fichier",
-    "EXECUTER_CMD": "Exécuter une commande",
-    "REDÉMARRER_SERV": "Redémarrer un service",
-    "SORTIR_RESULTAT": "Sortir résultat dans un tube"
-}
+ACTIONS = {}
 
 #------------------------------------------------------------------------------
-# Contraintes disponibles (TYPE_CODE: Libellé affiché)
+# Contraintes disponibles (TYPE_CODE: Libelle affiche)
 #------------------------------------------------------------------------------
-CONTRAINTES = {
-    "ESPACE_DISQUE": "Espace disque minimum",
-    "PLAGE_HORAIRE": "Plage horaire valide",
-    "PROCESSUS_ACTIF": "Processus en cours d'exécution"
-}
+CONTRAINTES = {}
 
 #------------------------------------------------------------------------------
-# Paramètres par défaut pour chaque déclencheur
+# Parametres par defaut pour chaque declencheur
 #------------------------------------------------------------------------------
-PARAMS_DEFAUT_DECLNCHEUR = {
-    "DEMARRAGE": {},
-    "HORAIRE": {"heure": "8", "minute": "0", "jours": "* * * * *"},
-    "FICHIER_MODIFIE": {"chemin": ""},
-    "FICHIER_CREE": {"chemin": ""},
-    "RESEAU_ACTIF": {"interface": "(toutes)"},
-    "SORTIE_TUBE": {"macro_source": "", "variable_reception": "DONNEES_RECUES"},
-    "USB_CONNECTE": {"peripherique": "(tous)"}
-}
+PARAMS_DEFAUT_DECLENCHEUR = {}
 
 #------------------------------------------------------------------------------
-# Paramètres par défaut pour chaque action
+# Parametres par defaut pour chaque action
 #------------------------------------------------------------------------------
-PARAMS_DEFAUT_ACTION = {
-    "NOTIFIER": {"titre": "Notification", "message": ""},
-    "COPIER_FICHIER": {"source": "", "destination": "", "motif": "*"},
-    "DEPLACER_FICHIER": {"source": "", "destination": ""},
-    "SUPPRIMER_FICHIER": {"chemin": "", "confirmation": "non"},
-    "EXECUTER_CMD": {"commande": ""},
-    "REDÉMARRER_SERV": {"service": ""},
-    "SORTIR_RESULTAT": {"tube": "", "donnees": ""}
-}
+PARAMS_DEFAUT_ACTION = {}
 
 #------------------------------------------------------------------------------
-# Paramètres par défaut pour chaque contrainte
+# Parametres par defaut pour chaque contrainte
 #------------------------------------------------------------------------------
-PARAMS_DEFAUT_CONTRAINTES = {
-    "ESPACE_DISQUE": {"espace_minimum": "10"},
-    "PLAGE_HORAIRE": {"heure_debut": "0800", "heure_fin": "1800"},
-    "PROCESSUS_ACTIF": {"processus": ""}
-}
+PARAMS_DEFAUT_CONTRAINTES = {}

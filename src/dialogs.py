@@ -7,7 +7,7 @@
 
 from tkinter import ttk, Frame, Label, Entry, Button, messagebox, X, Y
 from tkinter import Toplevel, Scrollbar, TOP, BOTTOM, LEFT, RIGHT, BOTH, W, E, N, S
-from config import DECLNCHEURS, ACTIONS, CONTRAINTES
+from config import DECLENCHEURS, ACTIONS, CONTRAINTES
 from fenetreEditionMacro import EditionDeclencheur, EditionAction, EditionContrainte, EditionVariable
 
 class DialogueNouvelleMacro(Toplevel):
@@ -48,9 +48,6 @@ class DialogueNouvelleMacro(Toplevel):
         self.cadre_variables.pack(fill=X, pady=5)
         self.cadres_variables = []
 
-        # Ajouter une premiere variable vide
-        self.ajouter_variable()
-
         Button(cadre_principal, text="+ Ajouter variable", command=self.ajouter_variable).pack(anchor=W)
 
         # Actions
@@ -60,9 +57,6 @@ class DialogueNouvelleMacro(Toplevel):
         self.conteneur_actions = Frame(cadre_principal)
         self.conteneur_actions.pack(fill=X, pady=5)
         self.cadres_actions = []
-
-        # Ajouter une premiere action vide
-        self.ajouter_action()
 
         Button(cadre_principal, text="+ Ajouter action", command=self.ajouter_action).pack(anchor=W)
 
