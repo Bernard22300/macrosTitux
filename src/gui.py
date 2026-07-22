@@ -169,7 +169,6 @@ class MacrosTituxApp(ttk.Frame):
             
             # Statut
             statut = "ACTIVE" if est_active else "inactive"
-            couleur_statut = "green" if est_active else "gray"
             
             # Inscrire dans la treeview
             self.tree_fonctions.insert("", "end", iid=nom_fonction, values=(nom_fonction, description, statut))
@@ -279,6 +278,7 @@ class MacrosTituxApp(ttk.Frame):
                 actions = infos.get("actions", [])
                 labels_actions = [a.get("label", "") for a in actions[:2]]
                 actions_str = ", ".join(labels_actions)
+                # IMPORTANT: l'iid est le nom du fichier (ex: test_demo_datingue.xml)
                 self.tree.insert("", "end", iid=f, values=(nom, declencheur, actions_str))
             except Exception as e:
                 self.tree.insert("", "end", iid=f, values=(f, "Erreur: " + str(e)[:30], "-"))
@@ -316,20 +316,21 @@ class MacrosTituxApp(ttk.Frame):
         if not self.element_selectionne:
             messagebox.showwarning("Attention", "Selectionnez une macro.")
             return
-        valeurs = self.tree.item(self.element_selectionne, "values")
-        nom_macro = valeurs[0] if valeurs else self.element_selectionne
-
+        
+        # IMPORTANT: element_selectionne est le nom du FICHIER (iid de la treeview)
+        nom_fichier = self.element_selectionne
+        
         dossier_macros = os.path.expanduser("~/.config/macrosTitux/macros/")
-        chemin_xml = os.path.join(dossier_macros, nom_macro + ".xml")
-
+        chemin_xml = os.path.join(dossier_macros, nom_fichier)
+        
         print("\n" + "=" * 60)
-        print(f"  XML de la macro: {nom_macro}")
+        print(f"  XML de la macro: {nom_fichier}")
         print("=" * 60)
         with open(chemin_xml, "r", encoding="utf-8") as f:
             print(f.read())
         print("=" * 60 + "\n")
 
-        chemin_sh = os.path.join(dossier_macros, nom_macro + ".sh")
+        chemin_sh = os.path.join(dossier_macros, nom_fichier.replace('.xml', '.sh'))
         try:
             infos = generer_bash_depuis_xml(chemin_xml, chemin_sortie=chemin_sh)
             print(f"Script genere: {chemin_sh}")
