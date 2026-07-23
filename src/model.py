@@ -139,7 +139,7 @@ def generer_bash_depuis_xml(chemin_xml, chemin_sortie=None, simulation=False):
 
     if not simulation:
         # Générer le script Bash via le shell script
-        chemin_script = Path(__file__).parent / "generate_bash.sh"
+        chemin_script = Path(__file__).parent / "generer_bash.sh"
         if chemin_sortie is None:
             chemin_sortie = str(chemin_xml).replace('.xml', '.sh')
 

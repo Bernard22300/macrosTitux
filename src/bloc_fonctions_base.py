@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Dict, Any, List
 
-class Fonctions_base(ABC):
+class Bloc_fonctions_base(ABC):
     """
     Classe abstraite définissant l'interface pour le gestionnaire de plugins.
     
