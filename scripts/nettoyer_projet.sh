@@ -1,121 +1,108 @@
 #!/bin/bash
-# =============================================================================
-# nettoyer_projet.sh - Supprime les fichiers/dossiers inutiles du projet
-# macrosTitux - Créé par Bernard Rolland
-# =============================================================================
+# nettoyer_projet.sh - Supprime les fichiers non necessaires au fonctionnement du projet
+# Usage : ./scripts/nettoyer_projet.sh
 
-set -e
+PROJET="/Data/Compte/Bernard_ROLLAND/Développement/macrosTitux"
 
-# Couleurs
-ROUGE='\033[0;31m'
-VERT='\033[0;32m'
-JAUNE='\033[1;33m'
-NEUTRE='\033[0m'
-
-PROJET="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$PROJET"
-
-echo -e "${JAUNE}[nettoyage] Démarrage du nettoyage de macrosTitux...${NEUTRE}"
-echo -e "${JAUNE}[nettoyage] Projet : $PROJET${NEUTRE}"
+echo "=============================================="
+echo "  NETTOYAGE DU PROJET macrosTitux"
+echo "=============================================="
 echo ""
 
-COMPTEUR=0
+# Liste des fichiers a supprimer
+declare -a A_SUPPRIMER=()
 
-# -----------------------------------------------------------------------------
-# Fonction : supprimer un fichier s'il existe
-# -----------------------------------------------------------------------------
-supprimer_fichier() {
-    local cible="$1"
-    local raison="$2"
-    if [ -f "$cible" ]; then
-        rm -f "$cible"
-        echo -e "  ${VERT}✅ Supprimé${NEUTRE} : $cible ($raison)"
-        ((COMPTEUR++))
-    fi
-}
+# --- Cache Python ---
+while IFS= read -r -d '' f; do
+    A_SUPPRIMER+=("$f")
+done < <(find "$PROJET" -type d -name "__pycache__" -print0)
 
-# -----------------------------------------------------------------------------
-# Fonction : supprimer un dossier s'il existe
-# -----------------------------------------------------------------------------
-supprimer_dossier() {
-    local cible="$1"
-    local raison="$2"
-    if [ -d "$cible" ]; then
-        rm -rf "$cible"
-        echo -e "  ${VERT}✅ Supprimé${NEUTRE} : $cible/ ($raison)"
-        ((COMPTEUR++))
-    fi
-}
+while IFS= read -r -d '' f; do
+    A_SUPPRIMER+=("$f")
+done < <(find "$PROJET" -name "*.pyc" -print0)
 
-echo "=== 1. Archives et backups locaux ==="
-supprimer_fichier "macrosTitux_pre_refactoring_20260721_120941.tar.gz" \
-    "archive pré-refactoring, GitHub suffit"
-supprimer_fichier "macrosTitux.tar" \
-    "archive tar obsolète si présente"
+# --- Fichiers temporaires editeur ---
+while IFS= read -r -d '' f; do
+    A_SUPPRIMER+=("$f")
+done < <(find "$PROJET" -name "*.kate-swp" -print0)
 
-echo ""
-echo "=== 2. Cache pytest ==="
-supprimer_dossier ".pytest_cache" \
-    "cache auto-généré par pytest"
-supprimer_dossier "pytest" \
-    "dossier vide redondant avec tests/"
+while IFS= read -r -d '' f; do
+    A_SUPPRIMER+=("$f")
+done < <(find "$PROJET" -name "*.swp" -print0)
 
-echo ""
-echo "=== 3. Fichiers de patch déjà appliqués ==="
-supprimer_fichier "src/constants_update.patch" \
-    "patch déjà appliqué, obsolète"
+while IFS= read -r -d '' f; do
+    A_SUPPRIMER+=("$f")
+done < <(find "$PROJET" -name "*~" -print0)
 
-echo ""
-echo "=== 4. Fichiers temporaires et d'échange ==="
-find . -name '*.swp' -o -name '*.swo' -o -name '*.kate-swp' -o -name '*~' | while read -r f; do
-    rm -f "$f"
-    echo -e "  ${VERT}✅ Supprimé${NEUTRE} : $f (fichier temporaire)"
-done
-
-echo ""
-echo "=== 5. Cache Python __pycache__ ==="
-find . -type d -name '__pycache__' | while read -r d; do
-    rm -rf "$d"
-    echo -e "  ${VERT}✅ Supprimé${NEUTRE} : $d/"
-done
-
-echo ""
-echo "=== 6. Vérification du .gitignore ==="
-
-FICHIERS_A_IGNORER=(
-    "__pycache__/"
-    "*.pyc"
-    ".pytest_cache/"
-    "*.swp"
-    "*.swo"
-    "*.kate-swp"
-    "*~"
-    "venv/"
-    "*.tar"
-    "*.tar.gz"
+# --- Scripts one-shot de migration et correction ---
+SCRIPTS_ONE_SHOT=(
+    "$PROJET/scripts/archiver_projet_pre_refactoring.sh"
+    "$PROJET/scripts/completer_generate_bash.sh"
+    "$PROJET/scripts/corriger_xml.sh"
+    "$PROJET/scripts/creer_macro_test_demo.sh"
+    "$PROJET/scripts/fix-gitignore.sh"
+    "$PROJET/scripts/fix-projet.sh"
+    "$PROJET/scripts/generer_fichiers_manquants.sh"
+    "$PROJET/scripts/gestion_fonctions.sh"
+    "$PROJET/scripts/implenter_demo_test.sh"
+    "$PROJET/scripts/migrer_lot1_donnees.sh"
+    "$PROJET/scripts/migrer_lot4_xml.sh"
+    "$PROJET/scripts/migrer_widgets_vers_edition.sh"
+    "$PROJET/scripts/refactor_modulaire.sh"
+    "$PROJET/scripts/refonte_application_nouvelle_architecture.sh"
 )
 
-MODIFIE=0
-for entree in "${FICHIERS_A_IGNORER[@]}"; do
-    if ! grep -qxF "$entree" .gitignore 2>/dev/null; then
-        echo "$entree" >> .gitignore
-        echo -e "  ${VERT}✅ Ajouté au .gitignore${NEUTRE} : $entree"
-        ((MODIFIE++))
+for f in "${SCRIPTS_ONE_SHOT[@]}"; do
+    if [ -f "$f" ]; then
+        A_SUPPRIMER+=("$f")
     fi
 done
 
-if [ "$MODIFIE" -eq 0 ]; then
-    echo -e "  ${JAUNE}ℹ️  .gitignore déjà à jour${NEUTRE}"
+# --- Fichiers patch one-shot ---
+if [ -f "$PROJET/src/constants_update.patch" ]; then
+    A_SUPPRIMER+=("$PROJET/src/constants_update.patch")
 fi
 
+# --- Dossier pytest redondant (tests/ existe deja) ---
+if [ -d "$PROJET/pytest" ]; then
+    A_SUPPRIMER+=("$PROJET/pytest")
+fi
+
+# --- Afficher la liste ---
+if [ ${#A_SUPPRIMER[@]} -eq 0 ]; then
+    echo "Rien a nettoyer. Le projet est deja propre."
+    exit 0
+fi
+
+echo "Fichiers/dossiers a supprimer (${#A_SUPPRIMER[@]}) :"
 echo ""
-echo "=== 7. Résumé ==="
-echo -e "${VERT}[nettoyage] $COMPTEUR fichier(s)/dossier(s) supprimé(s)${NEUTRE}"
-echo -e "${VERT}[nettoyage] $MODIFIE entrée(s) ajoutée(s) au .gitignore${NEUTRE}"
+for f in "${A_SUPPRIMER[@]}"; do
+    echo "  $f"
+done
 echo ""
-echo "Structure finale :"
-tree -I '__pycache__|.git|*.pyc|venv|*.swp|*.kate-swp'
+
+# --- Confirmation ---
+read -p "Supprimer ces fichiers ? (oui/non) : " CONFIRMATION
+
+if [ "$CONFIRMATION" != "oui" ]; then
+    echo "Nettoyage annule."
+    exit 0
+fi
+
+# --- Suppression ---
+COMPTEUR=0
+for f in "${A_SUPPRIMER[@]}"; do
+    if [ -d "$f" ]; then
+        rm -rf "$f"
+        echo "  📁 Supprime: $(basename "$f")/"
+    elif [ -f "$f" ]; then
+        rm -f "$f"
+        echo "  📄 Supprime: $(basename "$f")"
+    fi
+    COMPTEUR=$((COMPTEUR + 1))
+done
+
 echo ""
-echo -e "${VERT}==========================================${NEUTRE}"
-echo -e "${VERT}  NETTOYAGE TERMINÉ${NEUTRE}"
-echo -e "${VERT}==========================================${NEUTRE}"
+echo "=============================================="
+echo "  NETTOYAGE TERMINE ($COMPTEUR elements supprimes)"
+echo "=============================================="
