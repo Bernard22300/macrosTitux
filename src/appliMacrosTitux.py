@@ -18,7 +18,7 @@ sys.path.insert(0, str(src_dir))
 
 from gui import MacrosTituxApp
 from model import initialiser_dossiers
-from fonction_loader import charger_fonctions
+from bloc_fonctions import obtenir_bloc_fonctions
 from tkinter import Tk
 
 def principal():
@@ -28,8 +28,8 @@ def principal():
     
     # Chargement des fonctions actives
     print("\n=== Chargement des fonctions ===")
-    charger_fonctions()
-    print(f"Total: {len(charger_fonctions())} fonction(s) active(s)\n")
+    obtenir_bloc_fonctions().charger_tout()
+    print(f"Total: {len(obtenir_bloc_fonctions().charger_tout())} fonction(s) active(s)\n")
     
     # Démarrage de l'interface
     root = Tk()

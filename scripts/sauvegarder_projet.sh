@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------------------------
 # Script: sauvegarder_projet.sh
-# Description: Ajoute, committe et pousse les modifications vers GitHub
+# Description: Nettoie, ajoute, committe et pousse les modifications vers GitHub
 # Encodage: fr_FR.UTF-8
 #------------------------------------------------------------------------------
 
@@ -25,6 +25,33 @@ if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     exit 1
 fi
 ok "Dépôt Git détecté"
+
+# 1.5 NETTOYAGE AUTOMATIQUE (caches et scripts one-shot)
+log "Nettoyage automatique (caches et scripts temporaires)..."
+find "$PROJECT_ROOT" -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find "$PROJECT_ROOT" -name "*.pyc" -delete 2>/dev/null || true
+find "$PROJECT_ROOT" -name "*.kate-swp" -delete 2>/dev/null || true
+find "$PROJECT_ROOT" -name "*.swp" -delete 2>/dev/null || true
+find "$PROJECT_ROOT" -name "*~" -delete 2>/dev/null || true
+
+# Supprimer les scripts one-shot connus
+rm -f "$PROJECT_ROOT/scripts/migrer_vers_bloc_fonctions.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/archiver_projet_pre_refactoring.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/corriger_xml.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/creer_macro_test_demo.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/fix-gitignore.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/fix-projet.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/generer_fichiers_manquants.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/gestion_fonctions.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/implenter_demo_test.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/migrer_lot1_donnees.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/migrer_lot4_xml.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/migrer_widgets_vers_edition.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/refactor_modulaire.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/scripts/refonte_application_nouvelle_architecture.sh" 2>/dev/null || true
+rm -f "$PROJECT_ROOT/src/constants_update.patch" 2>/dev/null || true
+
+ok "Nettoyage terminé"
 
 # 2. Afficher changements
 log "Changements détectés :"

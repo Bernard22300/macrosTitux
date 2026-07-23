@@ -8,7 +8,7 @@
 from tkinter import ttk, messagebox, Listbox, X, W, E
 import os
 from model import generer_bash_depuis_xml, initialiser_dossiers
-from fonction_loader import obtenir_toutes_les_fonctions, scanner_fonctions_actives
+from bloc_fonctions import obtenir_bloc_fonctions
 from pathlib import Path
 
 class MacrosTituxApp(ttk.Frame):
@@ -245,7 +245,7 @@ class MacrosTituxApp(ttk.Frame):
         # Section Fonctions actives (recapitulatif)
         ttk.Label(parent, text="Fonctions actives (rapport)", font=("Arial", 10, "bold")).pack(pady=(20, 5))
         
-        fonctions = obtenir_toutes_les_fonctions()
+        fonctions = obtenir_bloc_fonctions().obtenir_fonctions_actives()
         
         if fonctions:
             for ident, instance in fonctions.items():

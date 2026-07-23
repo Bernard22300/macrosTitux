@@ -36,20 +36,7 @@ done < <(find "$PROJET" -name "*~" -print0)
 
 # --- Scripts one-shot de migration et correction ---
 SCRIPTS_ONE_SHOT=(
-    "$PROJET/scripts/archiver_projet_pre_refactoring.sh"
-    "$PROJET/scripts/completer_generate_bash.sh"
-    "$PROJET/scripts/corriger_xml.sh"
-    "$PROJET/scripts/creer_macro_test_demo.sh"
-    "$PROJET/scripts/fix-gitignore.sh"
-    "$PROJET/scripts/fix-projet.sh"
-    "$PROJET/scripts/generer_fichiers_manquants.sh"
-    "$PROJET/scripts/gestion_fonctions.sh"
-    "$PROJET/scripts/implenter_demo_test.sh"
-    "$PROJET/scripts/migrer_lot1_donnees.sh"
-    "$PROJET/scripts/migrer_lot4_xml.sh"
-    "$PROJET/scripts/migrer_widgets_vers_edition.sh"
-    "$PROJET/scripts/refactor_modulaire.sh"
-    "$PROJET/scripts/refonte_application_nouvelle_architecture.sh"
+    "$PROJET/scripts/migrer_vers_bloc_fonctions.sh"
 )
 
 for f in "${SCRIPTS_ONE_SHOT[@]}"; do
@@ -57,16 +44,6 @@ for f in "${SCRIPTS_ONE_SHOT[@]}"; do
         A_SUPPRIMER+=("$f")
     fi
 done
-
-# --- Fichiers patch one-shot ---
-if [ -f "$PROJET/src/constants_update.patch" ]; then
-    A_SUPPRIMER+=("$PROJET/src/constants_update.patch")
-fi
-
-# --- Dossier pytest redondant (tests/ existe deja) ---
-if [ -d "$PROJET/pytest" ]; then
-    A_SUPPRIMER+=("$PROJET/pytest")
-fi
 
 # --- Afficher la liste ---
 if [ ${#A_SUPPRIMER[@]} -eq 0 ]; then

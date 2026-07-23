@@ -19,7 +19,7 @@ try:
     from instruction_contrainte_base import InstructionContrainte_base
     from donnee_base import Donnee_base
     from fonction_base import Fonction_de_base
-    import fonction_loader
+    from bloc_fonctions import obtenir_bloc_fonctions
 except ImportError:
     from src.macro_base import Macro_base
     from src.instruction_declencheur_base import InstructionDeclencheur_base
@@ -27,7 +27,7 @@ except ImportError:
     from src.instruction_contrainte_base import InstructionContrainte_base
     from src.donnee_base import Donnee_base
     from src.fonction_base import Fonction_de_base
-    from src import fonction_loader
+    from src from bloc_fonctions import obtenir_bloc_fonctions
 
 class Macro(Macro_base):
     """
