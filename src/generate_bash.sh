@@ -1,257 +1,385 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------------------------
-# Script: generate_bash.sh
-# Description: Convertit un fichier XML de macro en script Bash exécutable
-# Encodage: fr_FR.UTF-8
+# Fichier: generate_bash.sh
+# Description: Convertit un XML de macro en script Bash exécutable
+# Version: 1.1
+# Licence: GPL-3.0
 #------------------------------------------------------------------------------
 
-set -euo pipefail
+set -e
 
-if [[ $# -lt 2 ]]; then
-    echo "Utilisation: $0 <fichier_input.xml> <fichier_output.sh>"
+if [ $# -lt 2 ]; then
+    echo "Utilisation: $0 <fichier_xml> <fichier_sortie>"
     exit 1
 fi
 
-ENTREE_XML="$1"
-SORTIE_SH="$2"
+FICHIER_XML="$1"
+FICHIER_SORTIE="$2"
 
-if [[ ! -f "$ENTREE_XML" ]]; then
-    echo "Erreur: Fichier XML introuvable: $ENTREE_XML"
+if [ ! -f "$FICHIER_XML" ]; then
+    echo "Erreur: Fichier XML introuvable: $FICHIER_XML"
     exit 1
 fi
 
-#------------------------------------------------------------------------------
-# Vérification des dépendances
-#------------------------------------------------------------------------------
-if ! command -v xmllint >/dev/null 2>&1; then
-    echo "Erreur: xmllint non trouvé. Installer avec: sudo apt-get install libxml2-utils"
-    exit 1
-fi
+echo "=== Conversion XML -> Bash ==="
+echo "Entree : $FICHIER_XML"
+echo "Sortie : $FICHIER_SORTIE"
+echo ""
 
-#------------------------------------------------------------------------------
-# Extraction des données depuis le XML
-#------------------------------------------------------------------------------
-extract_attr() {
-    local element="$1"
-    local attr="$2"
-    xmllint --xpath "string($element/@$attr)" "$ENTREE_XML" 2>/dev/null || echo ""
+# Extraction du nom de la macro
+NOM_MACRO=$(xmllint --xpath "string(/macro/@name)" "$FICHIER_XML" 2>/dev/null || echo "Macro_Sans_Nom")
+echo "Macro: $NOM_MACRO"
+echo ""
+
+# Fonction utilitaire pour extraire un parametre d'une action
+# Usage: extraire_param <fichier_xml> <action_id> <key>
+extraire_param() {
+    local xml_file="$1"
+    local action_id="$2"
+    local key="$3"
+    xmllint --xpath "string(//action[@id='$action_id']/config/parametre[@key='$key']/@value)" "$xml_file" 2>/dev/null
 }
 
-extract_param() {
-    local parent="$1"
-    local key="$2"
-    xmllint --xpath "string($parent/param[@key='$key']/@value)" "$ENTREE_XML" 2>/dev/null || echo ""
-}
-
-# Nom de la macro
-NOM_MACRO=$(extract_attr "//macro" "name")
-[[ -z "$NOM_MACRO" ]] && NOM_MACRO="macro_non_nomme"
-
-# Type de déclencheur
-TYPE_DECLNCHEUR=$(extract_attr "//declencheur" "type")
-LIBELLE_DECLNCHEUR=$(extract_attr "//declencheur" "label")
-
-# Paramètres du déclencheur
-declare -A PARAMS_DECLNCHEUR
-for key in $(xmllint --xpath "//declencheur/config/param/@key" "$ENTREE_XML" 2>/dev/null | sed 's/key="\([^"]*\)"/\1\n/g'); do
-    value=$(extract_param "//declencheur/config" "$key")
-    PARAMS_DECLNCHEUR["$key"]="$value"
-done
-
-# Construire le script Bash
-
-cat > "$SORTIE_SH" << EOFHEADER
+# Creation du script de sortie
+cat > "$FICHIER_SORTIE" <<HEADER
 #!/bin/bash
 # -*- coding: utf-8 -*-
 #------------------------------------------------------------------------------
-# Script généré par macrosTitux v0.3
 # Macro: $NOM_MACRO
-# Déclencheur: $LIBELLE_DECLNCHEUR
-# Généré le: $(date '+%Y-%m-%d %H:%M:%S')
+# Genere le: $(date '+%Y-%m-%d %H:%M:%S')
+# Source XML: $FICHIER_XML
 #------------------------------------------------------------------------------
+set -e
 
-set -euo pipefail
+HEADER
 
-# Variables
-EOFHEADER
+# ------------------------------------------------------------------------------
+# SECTION 1: VARIABLES
+# ------------------------------------------------------------------------------
+echo "=== Traitement des variables ==="
 
-# Variables déclarées dans la macro
-while IFS= read -r var_line; do
-    var_name=$(echo "$var_line" | cut -d'|' -f1)
-    var_value=$(echo "$var_line" | cut -d'|' -f2-)
-    if [[ -n "$var_name" ]]; then
-        echo "$var_name=\"$var_value\"" >> "$SORTIE_SH"
-    fi
-done < <(xmllint --xpath "//variables/variable" "$ENTREE_XML" 2>/dev/null | grep -oP 'name="\K[^"]+' | paste -d'|' - <(xmllint --xpath "//variables/variable" "$ENTREE_XML" 2>/dev/null | grep -oP 'value="\K[^"]+'))
+NOMBRE_VARS=$(xmllint --xpath "count(//variables/variable)" "$FICHIER_XML" 2>/dev/null || echo "0")
 
-# Génération du corps selon le type de déclencheur
-echo "" >> "$SORTIE_SH"
-echo "# Déclencheur: $LIBELLE_DECLNCHEUR" >> "$SORTIE_SH"
+if [ "$NOMBRE_VARS" -gt 0 ]; then
+    echo '# Variables' >> "$FICHIER_SORTIE"
+    
+    for i in $(seq 1 "$NOMBRE_VARS"); do
+        NOM_VAR=$(xmllint --xpath "string(//variables/variable[$i]/@name)" "$FICHIER_XML" 2>/dev/null)
+        VALEUR_VAR=$(xmllint --xpath "string(//variables/variable[$i]/@value)" "$FICHIER_XML" 2>/dev/null)
+        
+        if [ -n "$VALEUR_VAR" ]; then
+            echo "${NOM_VAR}=\"${VALEUR_VAR}\"" >> "$FICHIER_SORTIE"
+        else
+            echo "# Variable ${NOM_VAR} (a definir)" >> "$FICHIER_SORTIE"
+        fi
+    done
+    
+    echo "" >> "$FICHIER_SORTIE"
+    echo "  ✓ $NOMBRE_VARS variable(s) declaree(s)"
+else
+    echo "  ℹ Aucune variable definie"
+fi
 
-case "$TYPE_DECLNCHEUR" in
-    "DEMARRAGE")
-        echo "# Ce script est conçu pour être exécuté au démarrage" >> "$SORTIE_SH"
-        echo "logger 'Macro $NOM_MACRO démarrée'" >> "$SORTIE_SH"
-        ;;
-    "HORAIRE")
-        HEURE="${PARAMS_DECLNCHEUR[heure]:-8}"
-        MINUTE="${PARAMS_DECLNCHEUR[minute]:-0}"
-        echo "# Programme avec cron à ${HEURE}:${MINUTE}" >> "$SORTIE_SH"
-        echo "crontab -l 2>/dev/null | grep -v '$NOM_MACRO'" >> "$SORTIE_SH"
-        echo "echo \"${MINUTE} ${HEURE} * * * $SORTIE_SH\" | crontab -" >> "$SORTIE_SH"
-        ;;
-    "FICHIER_MODIFIE")
-        CHEMIN="${PARAMS_DECLNCHEUR[chemin]:-/tmp}"
-        echo "# Surveillance de modification de fichier" >> "$SORTIE_SH"
-        echo "INOTIFY_WAIT=\"${CHEMIN}\"" >> "$SORTIE_SH"
-        echo "echo 'Surveillance active sur: $INOTIFY_WAIT'" >> "$SORTIE_SH"
-        ;;
-    "FICHIER_CREE")
-        CHEMIN="${PARAMS_DECLNCHEUR[chemin]:-/tmp}"
-        echo "# Surveillance de création de fichier" >> "$SORTIE_SH"
-        echo "WATCH_PATH=\"${CHEMIN}\"" >> "$SORTIE_SH"
-        ;;
-    "RESEAU_ACTIF")
-        INTERFACE="${PARAMS_DECLNCHEUR[interface]:-eth0}"
-        echo "# Vérification du réseau sur interface: $INTERFACE" >> "$SORTIE_SH"
-        echo "ip link show $INTERFACE | grep -q 'UP'" >> "$SORTIE_SH"
-        ;;
-    "SORTIE_TUBE")
-        TUBE="${PARAMS_DECLNCHEUR[tube]:-/tmp/macrosTitux_tube}"
-        VAR_RECEPTION="${PARAMS_DECLNCHEUR[variable_reception]:-DONNEES_RECUES}"
-        echo "# Lecture depuis le tube: $TUBE" >> "$SORTIE_SH"
-        echo "$VAR_RECEPTION=\$(cat \"$TUBE\" 2>/dev/null || echo '')" >> "$SORTIE_SH"
-        ;;
-    "USB_CONNECTE")
-        PERIPHERIQUE="${PARAMS_DECLNCHEUR[peripherique]:-(tous)}"
-        echo "# Détection USB: $PERIPHERIQUE" >> "$SORTIE_SH"
-        echo "udevadm monitor --environment --udev 2>/dev/null &" >> "$SORTIE_SH"
-        ;;
-    *)
-        echo "# Déclencheur inconnu: $TYPE_DECLNCHEUR" >> "$SORTIE_SH"
-        ;;
-esac
+echo ""
 
-# Génération des contraintes
-echo "" >> "$SORTIE_SH"
-echo "# Contraintes" >> "$SORTIE_SH"
+# ------------------------------------------------------------------------------
+# SECTION 2: DECLENCHEURS
+# ------------------------------------------------------------------------------
+echo "=== Traitement des declencheurs ==="
 
-while IFS='|' read -r c_type c_label c_params; do
-    [[ -z "$c_type" ]] && continue
+TYPE_DECL=$(xmllint --xpath "string(//declencheur/@type)" "$FICHIER_XML" 2>/dev/null || echo "")
 
-    case "$c_type" in
-        "ESPACE_DISQUE")
-            ESPACE_MIN=$(echo "$c_params" | grep -oP 'espace_minimum=\K\d+' || echo "10")
-            echo "ESPACE_LIBRE=\$(df -k / | tail -1 | awk '{print \$4}')" >> "$SORTIE_SH"
-            echo "if [[ \$ESPACE_LIBRE -lt $((ESPACE_MIN * 1024 * 1024)) ]]; then" >> "$SORTIE_SH"
-            echo "    logger 'Contrainte espace disque non respectée'" >> "$SORTIE_SH"
-            echo "    exit 1" >> "$SORTIE_SH"
-            echo "fi" >> "$SORTIE_SH"
+if [ -n "$TYPE_DECL" ]; then
+    case "$TYPE_DECL" in
+        "DEMARRAGE_APP")
+            DELAI=$(xmllint --xpath "string(//declencheur/config/parametre[@key='delai']/@value)" "$FICHIER_XML" 2>/dev/null || echo "0")
+            
+            cat >> "$FICHIER_SORTIE" <<DEMARRAGE
+
+# === DECLENCHEUR: Demarrage application ===
+echo "[Demarrage] Initialisation de la macro '$NOM_MACRO'..."
+sleep $DELAI
+echo "[Demarrage] Execution initiee."
+
+DEMARRAGE
+            echo "  ✓ Declencheur DEMARRAGE_APP (delai: ${DELAI}s)"
             ;;
-        "PLAGE_HORAIRE")
-            HEURE_DEBUT=$(echo "$c_params" | grep -oP 'heure_debut=\K\d+' || echo "0800")
-            HEURE_FIN=$(echo "$c_params" | grep -oP 'heure_fin=\K\d+' || echo "1800")
-            HEURE_ACTUELLE=$(date +%H%M)
-            echo "HEURE_ACTUELLE=\$(date +%H%M)" >> "$SORTIE_SH"
-            echo "if [[ \$HEURE_ACTUELLE -lt $HEURE_DEBUT || \$HEURE_ACTUELLE -gt $HEURE_FIN ]]; then" >> "$SORTIE_SH"
-            echo "    logger 'En dehors de la plage horaire autorisée'" >> "$SORTIE_SH"
-            echo "    exit 1" >> "$SORTIE_SH"
-            echo "fi" >> "$SORTIE_SH"
-            ;;
-        "PROCESSUS_ACTIF")
-            PROCESSUS=$(echo "$c_params" | grep -oP 'processus=\K[^&]+' || echo "")
-            if [[ -n "$PROCESSUS" ]]; then
-                echo "# Vérification processus: $PROCESSUS" >> "$SORTIE_SH"
-                echo "pgrep -x '$PROCESSUS' >/dev/null || exit 1" >> "$SORTIE_SH"
-            fi
-            ;;
-    esac
-done < <(xmllint --xpath "//contraintes/contrainte" "$ENTREE_XML" 2>/dev/null | \
-    grep -oP 'type="\K[^"]+' | paste -d'|' - \
-    <(xmllint --xpath "//contraintes/contrainte" "$ENTREE_XML" 2>/dev/null | \
-        grep -oP 'label="\K[^"]+' | \
-        paste -d'|' - \
-        <(xmllint --xpath "//contraintes/contrainte/config/param" "$ENTREE_XML" 2>/dev/null | \
-            grep -oP 'key="\K[^"]+=[^"]*' | tr '\n' '&')))
+        
+        "HORAIRE")
+            HEURE=$(xmllint --xpath "string(//declencheur/config/parametre[@key='heure']/@value)" "$FICHIER_XML" 2>/dev/null || echo "8")
+            MINUTE=$(xmllint --xpath "string(//declencheur/config/parametre[@key='minute']/@value)" "$FICHIER_XML" 2>/dev/null || echo "0")
+            
+            cat >> "$FICHIER_SORTIE" <<HORRAIRE
 
-# Génération des actions
-echo "" >> "$SORTIE_SH"
-echo "# Actions" >> "$SORTIE_SH"
+# === DECLENCHEUR: Horaire programme ===
+echo "[Horaire] La macro s'executera a ${HEURE}h${MINUTE}"
+HEURE_CIBLE="${HEURE}${MINUTE}"
 
-while IFS='|' read -r a_id a_type a_label a_params; do
-    [[ -z "$a_type" ]] && continue
-
-    case "$a_type" in
-        "NOTIFIER")
-            TITRE=$(echo "$a_params" | grep -oP 'titre=\K[^&]+' || echo "Notification")
-            MESSAGE=$(echo "$a_params" | grep -oP 'message=\K[^&]+' || echo "")
-            echo "notify-send \"$TITRE\" \"$MESSAGE\"" >> "$SORTIE_SH"
+HORRAIRE
+            echo "  ✓ Declencheur HORAIRE (${HEURE}h${MINUTE})"
             ;;
-        "COPIER_FICHIER")
-            SOURCE=$(echo "$a_params" | grep -oP 'source=\K[^&]+' || echo "")
-            DESTINATION=$(echo "$a_params" | grep -oP 'destination=\K[^&]+' || echo "")
-            MOTIF=$(echo "$a_params" | grep -oP 'motif=\K[^&]+' || echo "*")
-            if [[ -n "$SOURCE" && -n "$DESTINATION" ]]; then
-                echo "mkdir -p \"$DESTINATION\"" >> "$SORTIE_SH"
-                echo "cp -r \"$SOURCE\"/$MOTIF \"$DESTINATION/\" 2>/dev/null || true" >> "$SORTIE_SH"
-            fi
-            ;;
-        "DEPLACER_FICHIER")
-            SOURCE=$(echo "$a_params" | grep -oP 'source=\K[^&]+' || echo "")
-            DESTINATION=$(echo "$a_params" | grep -oP 'destination=\K[^&]+' || echo "")
-            if [[ -n "$SOURCE" && -n "$DESTINATION" ]]; then
-                echo "mv \"$SOURCE\" \"$DESTINATION/\" 2>/dev/null || true" >> "$SORTIE_SH"
-            fi
-            ;;
-        "SUPPRIMER_FICHIER")
-            CHEMIN=$(echo "$a_params" | grep -oP 'chemin=\K[^&]+' || echo "")
-            CONFIRMATION=$(echo "$a_params" | grep -oP 'confirmation=\K[^&]+' || echo "non")
-            if [[ -n "$CHEMIN" ]]; then
-                if [[ "$CONFIRMATION" == "non" ]]; then
-                    echo "rm -rf \"$CHEMIN\" 2>/dev/null || true" >> "$SORTIE_SH"
-                else
-                    echo "read -p 'Supprimer $CHEMIN ? (o/n) ' CONFIRM && [[ \"\$CONFIRM\" == \"o\" ]] && rm -rf \"$CHEMIN\"" >> "$SORTIE_SH"
-                fi
-            fi
-            ;;
-        "EXECUTER_CMD")
-            COMMANDE=$(echo "$a_params" | grep -oP 'commande=\K[^&]+' || echo "echo 'Commande exécutée'")
-            echo "$COMMANDE" >> "$SORTIE_SH"
-            ;;
-        "REDÉMARRER_SERV")
-            SERVICE=$(echo "$a_params" | grep -oP 'service=\K[^&]+' || echo "")
-            if [[ -n "$SERVICE" ]]; then
-                echo "sudo systemctl restart \"$SERVICE\" 2>/dev/null || true" >> "$SORTIE_SH"
-            fi
-            ;;
-        "SORTIR_RESULTAT")
-            TUBE_SORTIE=$(echo "$a_params" | grep -oP 'tube=\K[^&]+' || echo "/tmp/resultat")
-            DONNEES=$(echo "$a_params" | grep -oP 'donnees=\K[^&]+' || echo "RESULTAT")
-            echo "echo \"\$${DONNEES}\" > \"$TUBE_SORTIE\" 2>/dev/null || true" >> "$SORTIE_SH"
-            ;;
+        
         *)
-            echo "# Action inconnue: $a_type" >> "$SORTIE_SH"
+            LABEL_DECL=$(xmllint --xpath "string(//declencheur/@label)" "$FICHIER_XML" 2>/dev/null || echo "")
+            cat >> "$FICHIER_SORTIE" <<UNKNOWN
+
+# === DECLENCHEUR: $LABEL_DECL (type: $TYPE_DECL) ===
+echo "[Declencheur] $LABEL_DECL (type non reconnu: $TYPE_DECL)"
+
+UNKNOWN
+            echo "  ⚠ Declencheur non reconnu: $TYPE_DECL"
             ;;
     esac
-done < <(xmllint --xpath "//actions/action" "$ENTREE_XML" 2>/dev/null | \
-    grep -oP 'id="\K[^"]+' | paste -d'|' - \
-    <(xmllint --xpath "//actions/action" "$ENTREE_XML" 2>/dev/null | \
-        grep -oP 'type="\K[^"]+' | \
-        paste -d'|' - \
-        <(xmllint --xpath "//actions/action"  "$ENTREE_XML" 2>/dev/null | \
-            grep -oP 'label="\K[^"]+' | \
-            paste -d'|' - \
-            <(xmllint --xpath "//actions/action/config/param" "$ENTREE_XML" 2>/dev/null | \
-                grep -oP 'key="\K[^"]+=[^"]*' | tr '\n' '&'))))
+else
+    echo "  ⚠ Aucun declencheur trouve"
+fi
 
-# Footer
-echo "" >> "$SORTIE_SH"
-echo "logger 'Macro $NOM_MACRO terminée'" >> "$SORTIE_SH"
-echo "exit 0" >> "$SORTIE_SH"
+echo ""
 
-# Rendre le script exécutable
-chmod +x "$SORTIE_SH"
+# ------------------------------------------------------------------------------
+# SECTION 3: CONTRAINTES
+# ------------------------------------------------------------------------------
+echo "=== Traitement des contraintes ==="
 
-echo "Succès: Script généré: $SORTIE_SH"
+NOMBRE_CONTR=$(xmllint --xpath "count(//contraintes/contrainte)" "$FICHIER_XML" 2>/dev/null || echo "0")
+
+if [ "$NOMBRE_CONTR" -gt 0 ]; then
+    cat >> "$FICHIER_SORTIE" <<CONTRAINTES
+
+# === CONTRAINTES ===
+
+CONTRAINTES
+    
+    for i in $(seq 1 "$NOMBRE_CONTR"); do
+        TYPE_CONTR=$(xmllint --xpath "string(//contraintes/contrainte[$i]/@type)" "$FICHIER_XML" 2>/dev/null)
+        LABEL_CONTR=$(xmllint --xpath "string(//contraintes/contrainte[$i]/@label)" "$FICHIER_XML" 2>/dev/null || echo "")
+        ID_CONTR=$(xmllint --xpath "string(//contraintes/contrainte[$i]/@id)" "$FICHIER_XML" 2>/dev/null || echo "$i")
+        
+        case "$TYPE_CONTR" in
+            "ESPACE_DISQUE")
+                MIN_ESPACE=$(xmllint --xpath "string(//contrainte[@id='$ID_CONTR']/config/parametre[@key='espace_minimum']/@value)" "$FICHIER_XML" 2>/dev/null || echo "10")
+                
+                cat >> "$FICHIER_SORTIE" <<ESPACE
+# Contrainte: Espace disque ($LABEL_CONTR)
+echo "[Controle] Verification de l'espace disque (min: ${MIN_ESPACE} Go)..."
+ESPACE_LIBRE=\$(df /home | tail -1 | awk '{print \$4}')
+ESPACE_GB=\$((ESPACE_LIBRE / 1024 / 1024))
+if [ \$ESPACE_GB -lt $MIN_ESPACE ]; then
+    echo "[Erreur] Espace insuffisant: \$ESPACE_GB Go disponible"
+    exit 1
+fi
+echo "[Controle] Espace OK: \$ESPACE_GB Go disponible."
+
+ESPACE
+                ;;
+            
+            "PLAGE_HORAIRE")
+                HEURE_DEBUT=$(xmllint --xpath "string(//contrainte[@id='$ID_CONTR']/config/parametre[@key='heure_debut']/@value)" "$FICHIER_XML" 2>/dev/null || echo "0800")
+                HEURE_FIN=$(xmllint --xpath "string(//contrainte[@id='$ID_CONTR']/config/parametre[@key='heure_fin']/@value)" "$FICHIER_XML" 2>/dev/null || echo "1800")
+                
+                cat >> "$FICHIER_SORTIE" <<HORRAIRE_C
+# Contrainte: Plage horaire ($LABEL_CONTR)
+echo "[Controle] Verification plage horaire (${HEURE_DEBUT}-${HEURE_FIN})..."
+HEURE_ACTUELLE=\$(date +%H%M)
+if [ "\$HEURE_ACTUELLE" -lt "$HEURE_DEBUT" ] || [ "\$HEURE_ACTUELLE" -gt "$HEURE_FIN" ]; then
+    echo "[Erreur] Hors plage horaire (\$HEURE_ACTUELLE)"
+    exit 1
+fi
+echo "[Controle] Plage horaire OK (\$HEURE_ACTUELLE)."
+
+HORRAIRE_C
+                ;;
+            
+            "PROCESSUS_ACTIF")
+                PROCESSUS=$(xmllint --xpath "string(//contrainte[@id='$ID_CONTR']/config/parametre[@key='processus']/@value)" "$FICHIER_XML" 2>/dev/null || echo "firefox")
+                
+                cat >> "$FICHIER_SORTIE" <<PROC
+# Contrainte: Processus actif ($LABEL_CONTR)
+echo "[Controle] Verification processus: $PROCESSUS..."
+if ! pgrep -x "$PROCESSUS" > /dev/null; then
+    echo "[Erreur] Processus $PROCESSUS non actif"
+    exit 1
+fi
+echo "[Controle] Processus $PROCESSUS actif."
+
+PROC
+                ;;
+            
+            *)
+                echo "# Contrainte non reconnue: $TYPE_CONTR" >> "$FICHIER_SORTIE"
+                ;;
+        esac
+    done
+    
+    echo "  ✓ $NOMBRE_CONTR contrainte(s) traitee(s)"
+else
+    echo "  ℹ Aucune contrainte definie"
+fi
+
+echo ""
+
+# ------------------------------------------------------------------------------
+# SECTION 4: ACTIONS
+# ------------------------------------------------------------------------------
+echo "=== Traitement des actions ==="
+
+cat >> "$FICHIER_SORTIE" <<ACTIONS_HEADER
+
+# === ACTIONS ===
+
+ACTIONS_HEADER
+
+NOMBRE_ACTIONS=$(xmllint --xpath "count(//actions/action)" "$FICHIER_XML" 2>/dev/null || echo "0")
+
+if [ "$NOMBRE_ACTIONS" -gt 0 ]; then
+    for i in $(seq 1 "$NOMBRE_ACTIONS"); do
+        ID_ACTION=$(xmllint --xpath "string(//actions/action[$i]/@id)" "$FICHIER_XML" 2>/dev/null || echo "$i")
+        TYPE_ACTION=$(xmllint --xpath "string(//actions/action[$i]/@type)" "$FICHIER_XML" 2>/dev/null || echo "")
+        LABEL_ACTION=$(xmllint --xpath "string(//actions/action[$i]/@label)" "$FICHIER_XML" 2>/dev/null || echo "")
+        
+        echo "  Action #$ID_ACTION: $TYPE_ACTION ($LABEL_ACTION)"
+        
+        case "$TYPE_ACTION" in
+            "NOTIFIER")
+                TITRE=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='titre']/@value)" "$FICHIER_XML" 2>/dev/null || echo "Notification")
+                MESSAGE=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='message']/@value)" "$FICHIER_XML" 2>/dev/null || echo "Message")
+                
+                cat >> "$FICHIER_SORTIE" <<NOTIFIER
+
+# Action #$ID_ACTION: NOTIFIER
+echo "[Action #$ID_ACTION] Notification: $TITRE"
+notify-send "$TITRE" "$MESSAGE"
+
+NOTIFIER
+                ;;
+            
+            "AFFICHER_DATE")
+                FORMAT=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='format']/@value)" "$FICHIER_XML" 2>/dev/null || echo "%Y-%m-%d")
+                TITRE=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='titre']/@value)" "$FICHIER_XML" 2>/dev/null || echo "Date du jour")
+                
+                cat >> "$FICHIER_SORTIE" <<AFFICHE_DATE
+
+# Action #$ID_ACTION: AFFICHER_DATE
+DATE_JOUR=\$(date +"$FORMAT")
+echo "[$TITRE] \$DATE_JOUR"
+if command -v zenity &> /dev/null; then
+    zenity --info --title="$TITRE" --text="Date du jour:\n\n\$DATE_JOUR" 2>/dev/null
+fi
+
+AFFICHE_DATE
+                ;;
+            
+            "EXECUTER_CMD")
+                COMMANDE=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='commande']/@value)" "$FICHIER_XML" 2>/dev/null || echo "")
+                
+                if [ -n "$COMMANDE" ]; then
+                    cat >> "$FICHIER_SORTIE" <<EXEC_CMD
+
+# Action #$ID_ACTION: EXECUTER_CMD
+echo "[Action #$ID_ACTION] Execution: $COMMANDE"
+$COMMANDE
+
+EXEC_CMD
+                fi
+                ;;
+            
+            "COPIER_FICHIER")
+                SOURCE=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='source']/@value)" "$FICHIER_XML" 2>/dev/null || echo "")
+                DESTINATION=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='destination']/@value)" "$FICHIER_XML" 2>/dev/null || echo "")
+                MOTIF=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='motif']/@value)" "$FICHIER_XML" 2>/dev/null || echo "*")
+                
+                if [ -n "$SOURCE" ] && [ -n "$DESTINATION" ]; then
+                    cat >> "$FICHIER_SORTIE" <<COPIE
+
+# Action #$ID_ACTION: COPIER_FICHIER
+echo "[Action #$ID_ACTION] Copie: $SOURCE -> $DESTINATION"
+mkdir -p "$DESTINATION"
+cp $MOTIF "$SOURCE" "$DESTINATION/" 2>/dev/null || echo "[Attention] Copie impossible"
+
+COPIE
+                fi
+                ;;
+            
+            "DEPLACER_FICHIER")
+                SOURCE=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='source']/@value)" "$FICHIER_XML" 2>/dev/null || echo "")
+                DESTINATION=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='destination']/@value)" "$FICHIER_XML" 2>/dev/null || echo "")
+                
+                if [ -n "$SOURCE" ] && [ -n "$DESTINATION" ]; then
+                    cat >> "$FICHIER_SORTIE" <<DEPLACE
+
+# Action #$ID_ACTION: DEPLACER_FICHIER
+echo "[Action #$ID_ACTION] Deplacement: $SOURCE -> $DESTINATION"
+mv "$SOURCE" "$DESTINATION/" 2>/dev/null || echo "[Attention] Deplacement impossible"
+
+DEPLACE
+                fi
+                ;;
+            
+            "SUPPRIMER_FICHIER")
+                CHEMIN=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='chemin']/@value)" "$FICHIER_XML" 2>/dev/null || echo "")
+                CONFIRMATION=$(xmllint --xpath "string(//action[@id='$ID_ACTION']/config/parametre[@key='confirmation']/@value)" "$FICHIER_XML" 2>/dev/null || echo "oui")
+                
+                if [ -n "$CHEMIN" ]; then
+                    if [ "$CONFIRMATION" = "non" ]; then
+                        cat >> "$FICHIER_SORTIE" <<SUPPRIME
+
+# Action #$ID_ACTION: SUPPRIMER_FICHIER
+echo "[Action #$ID_ACTION] Suppression: $CHEMIN"
+rm -rf "$CHEMIN" 2>/dev/null || echo "[Attention] Suppression impossible"
+
+SUPPRIME
+                    else
+                        cat >> "$FICHIER_SORTIE" <<SUPPRIME_C
+
+# Action #$ID_ACTION: SUPPRIMER_FICHIER (avec confirmation)
+echo "[Action #$ID_ACTION] Suppression: $CHEMIN"
+read -p "Confirmer la suppression ? (o/n) " -n 1 -r
+echo
+if [[ \$REPLY =~ ^[Oo]\$ ]]; then
+    rm -rf "$CHEMIN" 2>/dev/null
+    echo "[Action] Fichier supprime"
+else
+    echo "[Action] Annule"
+fi
+
+SUPPRIME_C
+                    fi
+                fi
+                ;;
+            
+            *)
+                cat >> "$FICHIER_SORTIE" <<INCONNU
+
+# Action #$ID_ACTION: $LABEL_ACTION (type non reconnu: $TYPE_ACTION)
+echo "[Action #$ID_ACTION] Non implementee: $TYPE_ACTION"
+
+INCONNU
+                ;;
+        esac
+    done
+    
+    echo "  ✓ $NOMBRE_ACTIONS action(s) traitee(s)"
+else
+    echo "  ⚠ Aucune action definie"
+fi
+
+# Section de fin
+cat >> "$FICHIER_SORTIE" <<END
+
+echo ""
+echo "==================================="
+echo "Macro '$NOM_MACRO' executee avec succes"
+echo "==================================="
 exit 0
+
+END
+
+chmod +x "$FICHIER_SORTIE"
+
+echo ""
+echo "=== Conversion terminee ==="
+echo "Script genere: $FICHIER_SORTIE"
+echo ""
+echo "Pour executer:"
+echo "  $FICHIER_SORTIE"
