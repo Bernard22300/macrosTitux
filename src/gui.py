@@ -159,7 +159,7 @@ class MacrosTituxApp(ttk.Frame):
                         from fonction_base import Fonction_de_base
                         if issubclass(attr, Fonction_de_base) and attr != Fonction_de_base:
                             instance = attr()
-                            description = instance.description
+                            description = instance.lire_resume()
                             break
                 
                 # Nettoyer le sys.path
@@ -248,11 +248,12 @@ class MacrosTituxApp(ttk.Frame):
         fonctions = obtenir_bloc_fonctions().obtenir_fonctions_actives()
         
         if fonctions:
-            for ident, instance in fonctions.items():
+            for instance in fonctions:
+                ident = instance.identificateur
                 cadre_fonction = ttk.Frame(parent)
                 cadre_fonction.pack(fill=X, padx=20, pady=2)
                 ttk.Label(cadre_fonction, text=f"✓ {ident}", foreground="green").pack(side="left")
-                ttk.Label(cadre_fonction, text=instance.description).pack(side="left", padx=10)
+                ttk.Label(cadre_fonction, text=instance.lire_resume()).pack(side="left", padx=10)
         else:
             ttk.Label(parent, text="Aucune fonction active", foreground="gray").pack(pady=10)
         

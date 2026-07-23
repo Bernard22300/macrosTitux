@@ -29,7 +29,7 @@ def principal():
     # Chargement des fonctions actives
     print("\n=== Chargement des fonctions ===")
     obtenir_bloc_fonctions().charger_tout()
-    print(f"Total: {len(obtenir_bloc_fonctions().charger_tout())} fonction(s) active(s)\n")
+    print(f"Total: {obtenir_bloc_fonctions().nb_total()} fonction(s) active(s)\n")
     
     # Démarrage de l'interface
     root = Tk()
